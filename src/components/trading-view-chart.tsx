@@ -17,15 +17,25 @@ import React, {
   useEffect,
   useImperativeHandle,
   forwardRef,
-  useCallback,
   useState,
 } from "react";
 import { Skeleton } from "./ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
 
+interface IndicatorData {
+    sma?: LineData[];
+    rsi?: LineData[];
+    macd?: {
+        macdLine: LineData[];
+        signalLine: LineData[];
+        histogram: HistogramData[];
+    }
+}
+
 export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
   getChartData: () => CandlestickData[];
+  getIndicatorData: () => IndicatorData;
 }
 
 interface Indicators {
@@ -193,6 +203,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [chartData, setChartData] = useState<CandlestickData[]>([]);
+    const [indicatorData, setIndicatorData] = useState<IndicatorData>({});
 
     useEffect(() => {
       if (chartRef.current) {
@@ -254,6 +265,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     useEffect(() => {
         if (!chartRef.current || chartData.length === 0) return;
         const chart = chartRef.current;
+        const newIndicatorData: IndicatorData = {};
 
         // Clear existing indicator series
         Object.entries(seriesRef.current).forEach(([key, series]) => {
@@ -269,33 +281,39 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         // SMA
         if (indicators.sma) {
+          const smaData = calculateSMA(chartData, 20);
+          newIndicatorData.sma = smaData;
           seriesRef.current.sma = chart.addLineSeries({ color: 'orange', lineWidth: 2, priceScaleId: 'right' });
-          seriesRef.current.sma.setData(calculateSMA(chartData, 20));
+          seriesRef.current.sma.setData(smaData);
         }
 
         // RSI
         if (indicators.rsi) {
+            const rsiData = calculateRSI(chartData, 14);
+            newIndicatorData.rsi = rsiData;
             seriesRef.current.rsi = chart.addLineSeries({ 
                 color: 'purple', 
                 lineWidth: 2, 
                 pane: paneIndex,
             });
-            seriesRef.current.rsi.setData(calculateRSI(chartData, 14));
+            seriesRef.current.rsi.setData(rsiData);
             paneIndex++;
         }
 
         // MACD
         if (indicators.macd) {
-            const { macdLine, signalLine, histogram } = calculateMACD(chartData, 12, 26, 9);
+            const macdData = calculateMACD(chartData, 12, 26, 9);
+            newIndicatorData.macd = macdData;
             seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: paneIndex });
-            seriesRef.current.macdLine.setData(macdLine);
+            seriesRef.current.macdLine.setData(macdData.macdLine);
             seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: paneIndex });
-            seriesRef.current.macdSignal.setData(signalLine);
+            seriesRef.current.macdSignal.setData(macdData.signalLine);
             seriesRef.current.macdHist = chart.addHistogramSeries({ pane: paneIndex });
-            seriesRef.current.macdHist.setData(histogram);
+            seriesRef.current.macdHist.setData(macdData.histogram);
             paneIndex++;
         }
         
+        setIndicatorData(newIndicatorData);
         chart.timeScale().fitContent();
 
     }, [chartData, indicators]);
@@ -308,6 +326,9 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
       },
       getChartData: (): CandlestickData[] => {
         return chartData;
+      },
+      getIndicatorData: (): IndicatorData => {
+        return indicatorData;
       }
     }));
 

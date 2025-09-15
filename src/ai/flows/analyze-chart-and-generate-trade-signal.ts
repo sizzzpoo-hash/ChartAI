@@ -19,6 +19,9 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
   ohlcData: z
     .string()
     .describe('A JSON string representing an array of OHLC (Open, High, Low, Close) data points for the chart.'),
+  indicatorData: z
+    .string()
+    .describe('A JSON string representing calculated technical indicator data (SMA, RSI, MACD).'),
 });
 export type AnalyzeChartAndGenerateTradeSignalInput =
   z.infer<typeof AnalyzeChartAndGenerateTradeSignalInputSchema>;
@@ -46,18 +49,22 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
   output: {schema: AnalyzeChartAndGenerateTradeSignalOutputSchema},
   prompt: `You are an expert crypto currency chart analyst acting as a conservative swing trader. Your goal is to identify high-probability trade setups with favorable risk-to-reward ratios.
 
-Analyze the provided chart image and OHLC data by following these steps:
-1.  **Identify the Overall Trend:** Determine if the market is in an uptrend, downtrend, or consolidation on the given timeframe.
-2.  **Identify Key Levels:** Pinpoint major support and resistance levels.
-3.  **Look for Patterns:** Identify any significant candlestick patterns (e.g., engulfing, doji, hammer) or chart patterns (e.g., head and shoulders, triangles) near key levels.
-4.  **Synthesize and Summarize:** Provide a step-by-step summary of your findings from the steps above.
+Analyze the provided chart image, OHLC data, and technical indicator data by following these steps:
+1.  **Identify the Overall Trend:** Use the OHLC data, SMA values, and the chart image to determine if the market is in an uptrend, downtrend, or consolidation on the given timeframe.
+2.  **Identify Key Levels:** Pinpoint major support and resistance levels using the OHLC data.
+3.  **Analyze Indicators & Patterns:** Look for candlestick patterns (e.g., engulfing, doji, hammer) near key levels. Use the provided RSI data to check for overbought/oversold conditions and the MACD data for momentum and potential trend reversals.
+4.  **Synthesize and Summarize:** Provide a step-by-step summary of your findings from the steps above, integrating the visual chart with the raw OHLC and indicator data.
 5.  **Generate a Trade Signal:** If a high-probability setup is identified, provide a clear trade signal. The stop loss must be placed at a logical level, and the take profit levels must ensure a minimum risk-to-reward ratio of 1:2. If no clear opportunity exists, state that and do not provide a trade signal.
 
-Use the OHLC data as the primary source for precise price points and the image for pattern recognition and trend analysis.
+Use the OHLC and indicator data as the primary source for precise price points and calculations. Use the chart image for visual confirmation of patterns and trends.
 
 Chart: {{media url=chartDataUri}}
+
 OHLC Data:
 {{{ohlcData}}}
+
+Technical Indicator Data:
+{{{indicatorData}}}
 `,
   config: {
     safetySettings: [

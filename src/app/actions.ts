@@ -1,9 +1,9 @@
 "use server";
 import { analyzeChartAndGenerateTradeSignal } from "@/ai/flows/analyze-chart-and-generate-trade-signal";
 
-export async function getAnalysis(chartDataUri: string, ohlcData: string) {
+export async function getAnalysis(chartDataUri: string, ohlcData: string, indicatorData: string) {
   try {
-    const result = await analyzeChartAndGenerateTradeSignal({ chartDataUri, ohlcData });
+    const result = await analyzeChartAndGenerateTradeSignal({ chartDataUri, ohlcData, indicatorData });
     return { success: true, data: result };
   } catch (error) {
     console.error("Error getting analysis:", error);

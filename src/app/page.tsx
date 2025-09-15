@@ -54,7 +54,8 @@ export default function Home() {
     try {
       const chartDataUri = await chartRef.current.takeScreenshot();
       const ohlcData = JSON.stringify(chartRef.current.getChartData());
-      const result = await getAnalysis(chartDataUri, ohlcData);
+      const indicatorData = JSON.stringify(chartRef.current.getIndicatorData());
+      const result = await getAnalysis(chartDataUri, ohlcData, indicatorData);
 
       if (result.success && result.data) {
         const newAnalysis: AnalysisResult = {
