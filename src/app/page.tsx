@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { BrainCircuit, BotMessageSquare, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TradingViewChart, type TradingViewChartRef } from "@/components/trading-view-chart";
 import { getAnalysis } from "@/app/actions";
 import { useAnalysisHistory } from "@/lib/hooks/use-analysis-history";
@@ -12,11 +12,31 @@ import type { AnalysisResult } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import AnalysisDisplay from "@/components/analysis-display";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+const timeframes = [
+  { value: "15m", label: "15 Minutes" },
+  { value: "1h", label: "1 Hour" },
+  { value: "4h", label: "4 Hours" },
+  { value: "1d", label: "1 Day" },
+  { value: "1w", label: "1 Week" },
+];
+
+const symbols = [
+  { value: "BTCUSDT", label: "BTC/USDT" },
+  { value: "ETHUSDT", label: "ETH/USDT" },
+  { value: "SOLUSDT", label: "SOL/USDT" },
+  { value: "XRPUSDT", label: "XRP/USDT" },
+  { value: "DOGEUSDT", label: "DOGE/USDT" },
+];
 
 export default function Home() {
   const chartRef = useRef<TradingViewChartRef>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [timeframe, setTimeframe] = useState("1d");
   const { addAnalysis } = useAnalysisHistory();
   const { toast } = useToast();
 
@@ -69,7 +89,39 @@ export default function Home() {
 
       <Card>
         <CardContent className="p-0">
-            <TradingViewChart ref={chartRef} />
+          <div className="p-4 border-b flex flex-col sm:flex-row gap-4 justify-start items-center">
+            <div className="grid gap-1.5 w-full sm:w-auto">
+              <Label htmlFor="symbol-select">Symbol</Label>
+              <Select value={symbol} onValueChange={setSymbol}>
+                <SelectTrigger id="symbol-select" className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Select symbol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {symbols.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5 w-full sm:w-auto">
+              <Label htmlFor="timeframe-select">Timeframe</Label>
+              <Select value={timeframe} onValueChange={setTimeframe}>
+                <SelectTrigger id="timeframe-select" className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Select timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeframes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <TradingViewChart ref={chartRef} symbol={symbol} timeframe={timeframe} />
         </CardContent>
       </Card>
 
@@ -82,21 +134,14 @@ export default function Home() {
 
       {isLoading && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BotMessageSquare className="mr-2" />
-              AI Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-20 w-full" />
-             <div className="flex items-center font-semibold mt-4">
-                <Sparkles className="mr-2 text-primary" />
-                Trade Signal
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <BotMessageSquare className="w-8 h-8 text-primary" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+              </div>
             </div>
-            <Skeleton className="h-24 w-full" />
           </CardContent>
         </Card>
       )}

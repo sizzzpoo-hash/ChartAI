@@ -14,140 +14,197 @@ import React, {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useState,
 } from "react";
-
-// Generate some random initial data
-const generateInitialData = (): CandlestickData[] => {
-  const data: CandlestickData[] = [];
-  let time = 1640995200 as UTCTimestamp; // Jan 1, 2022
-  let lastClose = 100;
-
-  for (let i = 0; i < 150; i++) {
-    const open = lastClose + (Math.random() - 0.5) * 5;
-    const high = Math.max(open, lastClose) + Math.random() * 5;
-    const low = Math.min(open, lastClose) - Math.random() * 5;
-    const close = (open + high + low) / 3 + (Math.random() - 0.5) * 5;
-    data.push({ time, open, high, low, close });
-    lastClose = close;
-    time = (time + 24 * 60 * 60) as UTCTimestamp; // Add one day
-  }
-  return data;
-};
+import { Skeleton } from "./ui/skeleton";
 
 export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
 }
 
-export const TradingViewChart = forwardRef<TradingViewChartRef, {}>((props, ref) => {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+interface TradingViewChartProps {
+  symbol: string;
+  timeframe: string;
+}
 
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
+// Binance API returns data in this format:
+// [ openTime, open, high, low, close, volume, closeTime, ... ]
+type BinanceKlineData = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
+  ...any[]
+];
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: "#FFFFFF00" }, // Transparent background
-        textColor: document.body.classList.contains('dark') ? "#D1D5DB" : "#1F2937",
-      },
-      grid: {
-        vertLines: { color: 'rgba(197, 203, 206, 0.2)' },
-        horzLines: { color: 'rgba(197, 203, 206, 0.2)' },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 450,
-      timeScale: {
-        borderColor: 'rgba(197, 203, 206, 0.4)',
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(197, 203, 206, 0.4)',
-      },
-    });
-
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#3366FF',
-      downColor: '#EF4444',
-      borderDownColor: '#EF4444',
-      borderUpColor: '#3366FF',
-      wickDownColor: '#EF4444',
-      wickUpColor: '#3366FF',
-    });
-
-    candlestickSeries.setData(generateInitialData());
-    chart.timeScale().fitContent();
-
-    chartRef.current = chart;
-    seriesRef.current = candlestickSeries;
-
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.resize(chartContainerRef.current.clientWidth, 450);
-      }
-    };
-    
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      chart.remove();
-    };
-  }, []);
-
-  useImperativeHandle(ref, () => ({
-    takeScreenshot: async (): Promise<string> => {
-      if (!chartRef.current) {
-        throw new Error("Chart not initialized");
-      }
-      const canvas = await chartRef.current.takeScreenshot();
-      return canvas.toDataURL("image/png");
-    },
+const formatBinanceData = (data: BinanceKlineData[]): CandlestickData[] => {
+  return data.map((item) => ({
+    time: (item[0] / 1000) as UTCTimestamp,
+    open: parseFloat(item[1]),
+    high: parseFloat(item[2]),
+    low: parseFloat(item[3]),
+    close: parseFloat(item[4]),
   }));
-  
-  const setDarkMode = useCallback(() => {
-    chartRef.current?.applyOptions({
-      layout: {
-        textColor: '#D1D5DB',
-      },
-    });
-  }, []);
-  
-  const setLightMode = useCallback(() => {
-    chartRef.current?.applyOptions({
-      layout: {
-        textColor: '#1F2937',
-      },
-    });
-  }, []);
+};
 
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.attributeName === 'class' && mutation.target.nodeName === 'BODY') {
-                const isDark = (mutation.target as HTMLElement).classList.contains('dark');
-                if (isDark) {
-                  setDarkMode();
-                } else {
-                  setLightMode();
-                }
-            }
+export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChartProps>(
+  ({ symbol, timeframe }, ref) => {
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    const chartRef = useRef<IChartApi | null>(null);
+    const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    const setDarkMode = useCallback(() => {
+        chartRef.current?.applyOptions({
+        layout: {
+            textColor: '#D1D5DB',
+        },
         });
-    });
+    }, []);
+    
+    const setLightMode = useCallback(() => {
+        chartRef.current?.applyOptions({
+        layout: {
+            textColor: '#1F2937',
+        },
+        });
+    }, []);
 
-    observer.observe(document.body, { attributes: true });
+    useEffect(() => {
+      const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+              if (mutation.attributeName === 'class' && mutation.target.nodeName === 'BODY') {
+                  const isDark = (mutation.target as HTMLElement).classList.contains('dark');
+                  if (isDark) {
+                    setDarkMode();
+                  } else {
+                    setLightMode();
+                  }
+              }
+          });
+      });
 
-    // Initial check
-    if (document.body.classList.contains('dark')) {
-        setDarkMode();
-    } else {
-        setLightMode();
-    }
+      observer.observe(document.body, { attributes: true });
 
-    return () => observer.disconnect();
-}, [setDarkMode, setLightMode]);
+      // Initial check
+      if (document.body.classList.contains('dark')) {
+          setDarkMode();
+      } else {
+          setLightMode();
+      }
 
+      return () => observer.disconnect();
+    }, [setDarkMode, setLightMode]);
 
-  return <div ref={chartContainerRef} className="w-full h-[450px]" />;
-});
+    useEffect(() => {
+      if (!chartContainerRef.current) return;
+  
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: document.body.classList.contains('dark') ? "#D1D5DB" : "#1F2937",
+        },
+        grid: {
+          vertLines: { color: 'rgba(197, 203, 206, 0.2)' },
+          horzLines: { color: 'rgba(197, 203, 206, 0.2)' },
+        },
+        width: chartContainerRef.current.clientWidth,
+        height: 450,
+        timeScale: {
+          borderColor: 'rgba(197, 203, 206, 0.4)',
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(197, 203, 206, 0.4)',
+        },
+      });
+  
+      const candlestickSeries = chart.addCandlestickSeries({
+        upColor: '#3366FF',
+        downColor: '#EF4444',
+        borderDownColor: '#EF4444',
+        borderUpColor: '#3366FF',
+        wickDownColor: '#EF4444',
+        wickUpColor: '#3366FF',
+      });
+  
+      chartRef.current = chart;
+      seriesRef.current = candlestickSeries;
+  
+      const handleResize = () => {
+        if (chartContainerRef.current) {
+          chart.resize(chartContainerRef.current.clientWidth, 450);
+        }
+      };
+      
+      window.addEventListener("resize", handleResize);
+  
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        chart.remove();
+      };
+    }, []);
+  
+    useEffect(() => {
+      if (!seriesRef.current) return;
+  
+      setLoading(true);
+      setError(null);
+      const fetchData = async () => {
+        try {
+          const response = await fetch(
+            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${timeframe}&limit=150`
+          );
+          if (!response.ok) {
+            throw new Error(`Failed to fetch data: ${response.statusText}`);
+          }
+          const data: BinanceKlineData[] = await response.json();
+          const formattedData = formatBinanceData(data);
+          seriesRef.current?.setData(formattedData);
+          chartRef.current?.timeScale().fitContent();
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("An unknown error occurred");
+            }
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchData();
+    }, [symbol, timeframe]);
+  
+    useImperativeHandle(ref, () => ({
+      takeScreenshot: async (): Promise<string> => {
+        if (!chartRef.current) {
+          throw new Error("Chart not initialized");
+        }
+        const canvas = await chartRef.current.takeScreenshot();
+        return canvas.toDataURL("image/png");
+      },
+    }));
+
+    return (
+        <div className="w-full h-[450px] relative">
+            {loading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
+                   <Skeleton className="w-full h-full" />
+                </div>
+            )}
+             {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-destructive/10 z-10">
+                   <p className="text-destructive-foreground p-4 bg-destructive rounded-md">{error}</p>
+                </div>
+            )}
+            <div ref={chartContainerRef} className="w-full h-full" />
+        </div>
+    );
+  }
+);
 
 TradingViewChart.displayName = "TradingViewChart";
