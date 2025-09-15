@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { BrainCircuit, BotMessageSquare, Sparkles } from "lucide-react";
+import { BrainCircuit, BotMessageSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TradingViewChart, type TradingViewChartRef } from "@/components/trading-view-chart";
 import { getAnalysis } from "@/app/actions";
 import { useAnalysisHistory } from "@/lib/hooks/use-analysis-history";
@@ -77,7 +77,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Analysis Error",
-        description: "Could not analyze the chart. Please try again.",
+        description: "An unexpected error occurred while analyzing the chart. Please check the console for details and try again.",
       });
     } finally {
       setIsLoading(false);

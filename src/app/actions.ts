@@ -7,7 +7,20 @@ export async function getAnalysis(chartDataUri: string, ohlcData: string) {
     return { success: true, data: result };
   } catch (error) {
     console.error("Error getting analysis:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during analysis.";
-    return { success: false, error: `Failed to get analysis from AI: ${errorMessage}` };
+
+    let errorMessage = "An unknown error occurred during analysis.";
+    if (error instanceof Error) {
+      // Check for common AI-related error messages if needed, otherwise use the message.
+      // For instance, you could check for specific strings if the error messages are consistent.
+      if (error.message.includes('UNAVAILABLE')) {
+        errorMessage = 'The AI model is currently unavailable. Please try again later.';
+      } else if (error.message.includes('INVALID_ARGUMENT')) {
+        errorMessage = 'There was an issue with the data sent for analysis. Please refresh and try again.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return { success: false, error: `Failed to get analysis: ${errorMessage}` };
   }
 }
