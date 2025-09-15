@@ -25,6 +25,7 @@ import { useTheme } from "@/hooks/use-theme";
 
 export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
+  getChartData: () => CandlestickData[];
 }
 
 interface Indicators {
@@ -305,6 +306,9 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         const canvas = chartRef.current.takeScreenshot();
         return canvas.toDataURL("image/png");
       },
+      getChartData: (): CandlestickData[] => {
+        return chartData;
+      }
     }));
 
     return (

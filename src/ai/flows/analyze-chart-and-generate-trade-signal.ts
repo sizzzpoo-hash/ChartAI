@@ -16,6 +16,9 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
     .describe(
       "A candlestick chart image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  ohlcData: z
+    .string()
+    .describe('A JSON string representing an array of OHLC (Open, High, Low, Close) data points for the chart.'),
 });
 export type AnalyzeChartAndGenerateTradeSignalInput =
   z.infer<typeof AnalyzeChartAndGenerateTradeSignalInputSchema>;
@@ -43,9 +46,13 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
   output: {schema: AnalyzeChartAndGenerateTradeSignalOutputSchema},
   prompt: `You are an expert crypto currency chart analyst.
 
-You are provided with a candlestick chart. Analyze the chart and generate a summary of the analysis, and based on the analysis, provide a trade signal including entry price range, take profit levels, and stop loss.  Do not be creative or take unneccessary risks, be very strict with the analysis.
+You are provided with a candlestick chart image and its corresponding OHLC data. Analyze the chart and the data to generate a summary of the analysis, and based on the analysis, provide a trade signal including entry price range, take profit levels, and stop loss.  Do not be creative or take unneccessary risks, be very strict with the analysis.
+
+Use the OHLC data as the primary source for precise price points and the image for pattern recognition.
 
 Chart: {{media url=chartDataUri}}
+OHLC Data:
+{{{ohlcData}}}
 `,
   config: {
     safetySettings: [
