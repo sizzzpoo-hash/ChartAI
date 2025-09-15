@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -9,7 +10,6 @@ import {
   UTCTimestamp,
   LineData,
   HistogramData,
-  Pane,
 } from "lightweight-charts";
 import React, {
   useRef,
@@ -73,25 +73,40 @@ const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
     let losses = 0;
     const rsiData: LineData[] = [];
 
-    for (let i = 1; i < data.length; i++) {
+    // First period calculation
+    for (let i = 1; i <= period; i++) {
         const change = data[i].close - data[i-1].close;
-        if (i <= period) {
-            if (change > 0) gains += change;
-            else losses -= change;
+        if (change > 0) {
+            gains += change;
         } else {
-            if (change > 0) {
-                gains = (gains * (period - 1) + change) / period;
-                losses = (losses * (period - 1)) / period;
-            } else {
-                gains = (gains * (period - 1)) / period;
-                losses = (losses * (period - 1) - change) / period;
-            }
+            losses -= change;
         }
-        if (i >= period) {
-            const rs = losses === 0 ? 100 : gains / losses;
-            const rsi = 100 - (100 / (1 + rs));
-            rsiData.push({ time: data[i].time, value: rsi });
+    }
+    gains /= period;
+    losses /= period;
+
+    const rs = losses === 0 ? 100 : gains / losses;
+    const rsi = 100 - (100 / (1 + rs));
+    rsiData.push({ time: data[period].time, value: rsi });
+
+    // Subsequent periods
+    for (let i = period + 1; i < data.length; i++) {
+        const change = data[i].close - data[i-1].close;
+        let currentGain = 0;
+        let currentLoss = 0;
+
+        if (change > 0) {
+            currentGain = change;
+        } else {
+            currentLoss = -change;
         }
+
+        gains = (gains * (period - 1) + currentGain) / period;
+        losses = (losses * (period - 1) + currentLoss) / period;
+        
+        const rs = losses === 0 ? 100 : gains / losses;
+        const rsi = 100 - (100 / (1 + rs));
+        rsiData.push({ time: data[i].time, value: rsi });
     }
     return rsiData;
 };
@@ -114,14 +129,20 @@ const calculateMACD = (data: CandlestickData[], fast: number, slow: number, sign
     const signalLine: LineData[] = [];
     const histogram: HistogramData[] = [];
     
+    // Align lengths
     const macdValues = emaSlow.map((slowVal, i) => i < closes.length - emaFast.length ? null : emaFast[i - (closes.length - emaFast.length)] - slowVal).filter(v => v !== null) as number[];
+    if (macdValues.length === 0) return { macdLine: [], signalLine: [], histogram: [] };
+
     const signalValues = calculateEMA(macdValues, signal);
     
-    for (let i = 0; i < macdValues.length; i++) {
-        const dataIndex = data.length - macdValues.length + i;
+    const macdStartIndex = data.length - macdValues.length;
+    const signalStartIndex = macdValues.length - signalValues.length;
+
+    for (let i = 0; i < signalValues.length; i++) {
+        const dataIndex = macdStartIndex + signalStartIndex + i;
         if (dataIndex < data.length) {
             const time = data[dataIndex].time;
-            const macdValue = macdValues[i];
+            const macdValue = macdValues[signalStartIndex + i];
             const signalValue = signalValues[i];
             const histValue = macdValue - signalValue;
             macdLine.push({ time, value: macdValue });
@@ -145,8 +166,6 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         macdSignal?: ISeriesApi<"Line">;
         macdHist?: ISeriesApi<"Histogram">;
     }>({});
-
-    const panesRef = useRef<{ rsi?: Pane, macd?: Pane }>({});
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -230,51 +249,57 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
     useEffect(() => {
         if (!chartRef.current || chartData.length === 0) return;
+        const chart = chartRef.current;
 
         // Clear existing indicator series
         Object.entries(seriesRef.current).forEach(([key, series]) => {
           if (key !== 'candlestick') {
-            chartRef.current?.removeSeries(series as ISeriesApi<any>);
+            if (series) chart.removeSeries(series);
             delete seriesRef.current[key as keyof typeof seriesRef.current];
           }
         });
         
         seriesRef.current.candlestick?.setData(chartData);
 
+        let paneIndex = 1;
+
         // SMA
         if (indicators.sma) {
-          seriesRef.current.sma = chartRef.current.addLineSeries({ color: 'orange', lineWidth: 2, priceScaleId: 'right' });
+          seriesRef.current.sma = chart.addLineSeries({ color: 'orange', lineWidth: 2, priceScaleId: 'right' });
           seriesRef.current.sma.setData(calculateSMA(chartData, 20));
         }
 
         // RSI
-        if (panesRef.current.rsi) chartRef.current.removePane(panesRef.current.rsi);
         if (indicators.rsi) {
-          panesRef.current.rsi = chartRef.current.addPane({
-            height: 100,
-            overlay: false,
-          });
-          seriesRef.current.rsi = chartRef.current.addLineSeries({ color: 'purple', lineWidth: 2, pane: panesRef.current.rsi });
-          seriesRef.current.rsi.setData(calculateRSI(chartData, 14));
+            const rsiPane = paneIndex;
+            seriesRef.current.rsi = chart.addLineSeries({ 
+                color: 'purple', 
+                lineWidth: 2, 
+                pane: rsiPane,
+                priceScale: {
+                    autoScale: true,
+                    mode: 1, // Normal
+                    invertScale: false,
+                }
+            });
+            seriesRef.current.rsi.setData(calculateRSI(chartData, 14));
+            paneIndex++;
         }
 
         // MACD
-        if (panesRef.current.macd) chartRef.current.removePane(panesRef.current.macd);
         if (indicators.macd) {
-            panesRef.current.macd = chartRef.current.addPane({
-                height: 150,
-                overlay: false,
-            });
+            const macdPane = paneIndex;
             const { macdLine, signalLine, histogram } = calculateMACD(chartData, 12, 26, 9);
-            seriesRef.current.macdLine = chartRef.current.addLineSeries({ color: 'blue', lineWidth: 2, pane: panesRef.current.macd });
+            seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: macdPane });
             seriesRef.current.macdLine.setData(macdLine);
-            seriesRef.current.macdSignal = chartRef.current.addLineSeries({ color: 'red', lineWidth: 2, pane: panesRef.current.macd });
+            seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: macdPane });
             seriesRef.current.macdSignal.setData(signalLine);
-            seriesRef.current.macdHist = chartRef.current.addHistogramSeries({ pane: panesRef.current.macd });
+            seriesRef.current.macdHist = chart.addHistogramSeries({ pane: macdPane });
             seriesRef.current.macdHist.setData(histogram);
+            paneIndex++;
         }
         
-        chartRef.current.timeScale().fitContent();
+        chart.timeScale().fitContent();
 
     }, [chartData, indicators]);
 
@@ -305,3 +330,5 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 );
 
 TradingViewChart.displayName = "TradingViewChart";
+
+    
