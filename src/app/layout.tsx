@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppLayout } from '@/components/app-layout';
 import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'Chart Alchemist',
@@ -28,8 +29,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppLayout>{children}</AppLayout>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AppLayout>{children}</AppLayout>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

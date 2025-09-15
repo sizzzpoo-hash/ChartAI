@@ -10,6 +10,7 @@ import {
   UTCTimestamp,
   LineData,
   HistogramData,
+  LayoutOptions,
 } from "lightweight-charts";
 import React, {
   useRef,
@@ -20,6 +21,7 @@ import React, {
   useState,
 } from "react";
 import { Skeleton } from "./ui/skeleton";
+import { useTheme } from "@/hooks/use-theme";
 
 export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
@@ -69,6 +71,7 @@ const calculateSMA = (data: CandlestickData[], period: number): LineData[] => {
 };
 
 const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
+    if (data.length <= period) return [];
     let gains = 0;
     let losses = 0;
     const rsiData: LineData[] = [];
@@ -85,8 +88,8 @@ const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
     gains /= period;
     losses /= period;
 
-    const rs = losses === 0 ? 100 : gains / losses;
-    const rsi = 100 - (100 / (1 + rs));
+    let rs = losses === 0 ? 100 : gains / losses;
+    let rsi = 100 - (100 / (1 + rs));
     rsiData.push({ time: data[period].time, value: rsi });
 
     // Subsequent periods
@@ -104,8 +107,8 @@ const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
         gains = (gains * (period - 1) + currentGain) / period;
         losses = (losses * (period - 1) + currentLoss) / period;
         
-        const rs = losses === 0 ? 100 : gains / losses;
-        const rsi = 100 - (100 / (1 + rs));
+        rs = losses === 0 ? 100 : gains / losses;
+        rsi = 100 - (100 / (1 + rs));
         rsiData.push({ time: data[i].time, value: rsi });
     }
     return rsiData;
@@ -113,15 +116,20 @@ const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
 
 const calculateEMA = (data: number[], period: number): number[] => {
     const k = 2 / (period + 1);
-    const emaArray = [data[0]];
-    for (let i = 1; i < data.length; i++) {
-        emaArray.push(data[i] * k + emaArray[i - 1] * (1 - k));
+    const emaArray: number[] = [];
+    if (data.length > 0) {
+        emaArray.push(data[0]);
+        for (let i = 1; i < data.length; i++) {
+            emaArray.push(data[i] * k + emaArray[i - 1] * (1 - k));
+        }
     }
     return emaArray;
 };
 
 const calculateMACD = (data: CandlestickData[], fast: number, slow: number, signal: number) => {
     const closes = data.map(d => d.close);
+    if (closes.length < slow) return { macdLine: [], signalLine: [], histogram: [] };
+
     const emaFast = calculateEMA(closes, fast);
     const emaSlow = calculateEMA(closes, slow);
     
@@ -129,8 +137,11 @@ const calculateMACD = (data: CandlestickData[], fast: number, slow: number, sign
     const signalLine: LineData[] = [];
     const histogram: HistogramData[] = [];
     
-    // Align lengths
-    const macdValues = emaSlow.map((slowVal, i) => i < closes.length - emaFast.length ? null : emaFast[i - (closes.length - emaFast.length)] - slowVal).filter(v => v !== null) as number[];
+    const macdValues = emaSlow.map((slowVal, i) => {
+        const fastIndex = i + (emaFast.length - emaSlow.length);
+        return fastIndex >= 0 ? emaFast[fastIndex] - slowVal : null;
+    }).filter(v => v !== null) as number[];
+
     if (macdValues.length === 0) return { macdLine: [], signalLine: [], histogram: [] };
 
     const signalValues = calculateEMA(macdValues, signal);
@@ -153,10 +164,21 @@ const calculateMACD = (data: CandlestickData[], fast: number, slow: number, sign
     return { macdLine, signalLine, histogram };
 };
 
+const darkThemeOptions: Partial<LayoutOptions> = {
+  textColor: '#D1D5DB',
+  background: { type: ColorType.Solid, color: "transparent" },
+};
+
+const lightThemeOptions: Partial<LayoutOptions> = {
+  textColor: '#1F2937',
+  background: { type: ColorType.Solid, color: "transparent" },
+};
+
 export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChartProps>(
   ({ symbol, timeframe, indicators }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
+    const { theme } = useTheme();
     
     const seriesRef = useRef<{
         candlestick?: ISeriesApi<"Candlestick">;
@@ -171,36 +193,17 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     const [error, setError] = useState<string | null>(null);
     const [chartData, setChartData] = useState<CandlestickData[]>([]);
 
-    const setDarkMode = useCallback(() => {
-      chartRef.current?.applyOptions({ layout: { textColor: '#D1D5DB' } });
-    }, []);
-
-    const setLightMode = useCallback(() => {
-      chartRef.current?.applyOptions({ layout: { textColor: '#1F2937' } });
-    }, []);
-
     useEffect(() => {
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'class' && mutation.target.nodeName === 'BODY') {
-            const isDark = (mutation.target as HTMLElement).classList.contains('dark');
-            if (isDark) setDarkMode(); else setLightMode();
-          }
-        });
-      });
-      observer.observe(document.body, { attributes: true });
-      if (document.body.classList.contains('dark')) setDarkMode(); else setLightMode();
-      return () => observer.disconnect();
-    }, [setDarkMode, setLightMode]);
-
+      if (chartRef.current) {
+        chartRef.current.applyOptions(theme === 'dark' ? darkThemeOptions : lightThemeOptions);
+      }
+    }, [theme]);
+    
     useEffect(() => {
       if (!chartContainerRef.current) return;
 
       const chart = createChart(chartContainerRef.current, {
-        layout: {
-          background: { type: ColorType.Solid, color: "transparent" },
-          textColor: document.body.classList.contains('dark') ? "#D1D5DB" : "#1F2937",
-        },
+        layout: theme === 'dark' ? darkThemeOptions : lightThemeOptions,
         grid: {
           vertLines: { color: 'rgba(197, 203, 206, 0.2)' },
           horzLines: { color: 'rgba(197, 203, 206, 0.2)' },
@@ -226,7 +229,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         window.removeEventListener("resize", handleResize);
         chart.remove();
       };
-    }, []);
+    }, [theme]);
 
     useEffect(() => {
       setLoading(true);
@@ -271,16 +274,10 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         // RSI
         if (indicators.rsi) {
-            const rsiPane = paneIndex;
             seriesRef.current.rsi = chart.addLineSeries({ 
                 color: 'purple', 
                 lineWidth: 2, 
-                pane: rsiPane,
-                priceScale: {
-                    autoScale: true,
-                    mode: 1, // Normal
-                    invertScale: false,
-                }
+                pane: paneIndex,
             });
             seriesRef.current.rsi.setData(calculateRSI(chartData, 14));
             paneIndex++;
@@ -288,13 +285,12 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         // MACD
         if (indicators.macd) {
-            const macdPane = paneIndex;
             const { macdLine, signalLine, histogram } = calculateMACD(chartData, 12, 26, 9);
-            seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: macdPane });
+            seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: paneIndex });
             seriesRef.current.macdLine.setData(macdLine);
-            seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: macdPane });
+            seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: paneIndex });
             seriesRef.current.macdSignal.setData(signalLine);
-            seriesRef.current.macdHist = chart.addHistogramSeries({ pane: macdPane });
+            seriesRef.current.macdHist = chart.addHistogramSeries({ pane: paneIndex });
             seriesRef.current.macdHist.setData(histogram);
             paneIndex++;
         }
@@ -306,7 +302,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     useImperativeHandle(ref, () => ({
       takeScreenshot: async (): Promise<string> => {
         if (!chartRef.current) throw new Error("Chart not initialized");
-        const canvas = await chartRef.current.takeScreenshot();
+        const canvas = chartRef.current.takeScreenshot();
         return canvas.toDataURL("image/png");
       },
     }));
@@ -330,5 +326,3 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 );
 
 TradingViewChart.displayName = "TradingViewChart";
-
-    

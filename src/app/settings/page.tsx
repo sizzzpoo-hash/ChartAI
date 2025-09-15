@@ -1,10 +1,15 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+
   return (
      <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -29,7 +34,11 @@ export default function SettingsPage() {
                   Enable a darker color scheme for the interface.
                 </span>
               </Label>
-              <Switch id="dark-mode" disabled />
+              <Switch 
+                id="dark-mode" 
+                checked={theme === 'dark'}
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              />
             </div>
              <div className="space-y-2">
               <Label htmlFor="chart-style">Chart Color Scheme</Label>
