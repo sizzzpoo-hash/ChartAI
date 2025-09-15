@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 const timeframes = [
   { value: "15m", label: "15 Minutes" },
@@ -93,7 +94,7 @@ export default function Home() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="p-4 border-b flex flex-col sm:flex-row gap-4 justify-start items-center">
+          <div className="p-4 border-b flex flex-wrap gap-4 justify-start items-center">
             <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="symbol-select">Symbol</Label>
               <Select value={symbol} onValueChange={setSymbol}>
@@ -124,6 +125,21 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
+            <Separator orientation="vertical" className="h-10 hidden sm:block" />
+             <div className="flex flex-wrap gap-4 sm:gap-6 items-center">
+                <div className="flex items-center space-x-2">
+                    <Switch id="sma-switch" checked={showSMA} onCheckedChange={setShowSMA} />
+                    <Label htmlFor="sma-switch">SMA (20)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Switch id="rsi-switch" checked={showRSI} onCheckedChange={setShowRSI} />
+                    <Label htmlFor="rsi-switch">RSI (14)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Switch id="macd-switch" checked={showMACD} onCheckedChange={setShowMACD} />
+                    <Label htmlFor="macd-switch">MACD</Label>
+                </div>
+            </div>
           </div>
           <TradingViewChart 
             ref={chartRef} 
@@ -131,26 +147,6 @@ export default function Home() {
             timeframe={timeframe}
             indicators={{ sma: showSMA, rsi: showRSI, macd: showMACD }}
           />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle>Technical Indicators</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4 sm:gap-6 items-center">
-            <div className="flex items-center space-x-2">
-                <Switch id="sma-switch" checked={showSMA} onCheckedChange={setShowSMA} />
-                <Label htmlFor="sma-switch">Moving Average (20)</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-                <Switch id="rsi-switch" checked={showRSI} onCheckedChange={setShowRSI} />
-                <Label htmlFor="rsi-switch">RSI (14)</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-                <Switch id="macd-switch" checked={showMACD} onCheckedChange={setShowMACD} />
-                <Label htmlFor="macd-switch">MACD (12, 26, 9)</Label>
-            </div>
         </CardContent>
       </Card>
 
