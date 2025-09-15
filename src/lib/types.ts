@@ -6,3 +6,10 @@ export type AnalysisResult = {
   analysis: AnalyzeChartAndGenerateTradeSignalOutput;
   chartImage: string;
 };
+
+export type RiskProfile = "conservative" | "moderate" | "aggressive";
+
+export type AiPreferences = {
+  riskProfile: RiskProfile;
+  detailedAnalysis: boolean;
+};

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
 
 const timeframes = [
   { value: "15m", label: "15 Minutes" },
@@ -43,6 +44,7 @@ export default function Home() {
   const [showRSI, setShowRSI] = useState(true);
   const [showMACD, setShowMACD] = useState(true);
   const { addAnalysis } = useAnalysisHistory();
+  const { preferences } = useAiPreferences();
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
@@ -55,7 +57,7 @@ export default function Home() {
       const chartDataUri = await chartRef.current.takeScreenshot();
       const ohlcData = JSON.stringify(chartRef.current.getChartData());
       const indicatorData = JSON.stringify(chartRef.current.getIndicatorData());
-      const result = await getAnalysis(chartDataUri, ohlcData, indicatorData);
+      const result = await getAnalysis(chartDataUri, ohlcData, indicatorData, preferences);
 
       if (result.success && result.data) {
         const newAnalysis: AnalysisResult = {

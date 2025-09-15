@@ -1,17 +1,22 @@
 "use server";
 import { analyzeChartAndGenerateTradeSignal } from "@/ai/flows/analyze-chart-and-generate-trade-signal";
+import type { AiPreferences } from "@/lib/types";
 
-export async function getAnalysis(chartDataUri: string, ohlcData: string, indicatorData: string) {
+export async function getAnalysis(chartDataUri: string, ohlcData: string, indicatorData: string, preferences: AiPreferences) {
   try {
-    const result = await analyzeChartAndGenerateTradeSignal({ chartDataUri, ohlcData, indicatorData });
+    const result = await analyzeChartAndGenerateTradeSignal({ 
+      chartDataUri, 
+      ohlcData, 
+      indicatorData,
+      riskProfile: preferences.riskProfile,
+      detailedAnalysis: preferences.detailedAnalysis,
+    });
     return { success: true, data: result };
   } catch (error) {
     console.error("Error getting analysis:", error);
 
     let errorMessage = "An unknown error occurred during analysis.";
     if (error instanceof Error) {
-      // Check for common AI-related error messages if needed, otherwise use the message.
-      // For instance, you could check for specific strings if the error messages are consistent.
       if (error.message.includes('UNAVAILABLE')) {
         errorMessage = 'The AI model is currently unavailable. Please try again later.';
       } else if (error.message.includes('INVALID_ARGUMENT')) {

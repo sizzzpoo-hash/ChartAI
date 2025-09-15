@@ -3,12 +3,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/use-theme";
+import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
+import type { RiskProfile } from "@/lib/types";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { preferences, setRiskProfile, setDetailedAnalysis, isInitialized } = useAiPreferences();
+
+  if (!isInitialized) {
+    return null; // Or a loading skeleton
+  }
 
   return (
      <div className="flex flex-col gap-8">
@@ -21,9 +27,9 @@ export default function SettingsPage() {
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Chart Appearance</CardTitle>
+            <CardTitle>Appearance</CardTitle>
             <CardDescription>
-              Modify the appearance of your trading charts.
+              Modify the appearance of the user interface.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -40,19 +46,6 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
               />
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="chart-style">Chart Color Scheme</Label>
-              <Select defaultValue="blue-purple" disabled>
-                <SelectTrigger id="chart-style">
-                  <SelectValue placeholder="Select scheme" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="blue-purple">Blue & Purple (Default)</SelectItem>
-                  <SelectItem value="green-red">Classic Green & Red</SelectItem>
-                  <SelectItem value="monochrome">Monochrome</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
@@ -66,7 +59,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
              <div className="space-y-3">
               <Label>Risk Profile</Label>
-              <RadioGroup defaultValue="moderate" className="flex gap-4" disabled>
+              <RadioGroup 
+                value={preferences.riskProfile} 
+                onValueChange={(value: string) => setRiskProfile(value as RiskProfile)}
+                className="flex gap-4"
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="conservative" id="r1" />
                   <Label htmlFor="r1">Conservative</Label>
@@ -88,7 +85,11 @@ export default function SettingsPage() {
                   Receive a more in-depth breakdown with the trade signal.
                 </span>
               </Label>
-              <Switch id="detailed-analysis" defaultChecked disabled />
+              <Switch 
+                id="detailed-analysis" 
+                checked={preferences.detailedAnalysis}
+                onCheckedChange={setDetailedAnalysis}
+              />
             </div>
           </CardContent>
         </Card>
