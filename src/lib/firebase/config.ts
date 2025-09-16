@@ -1,19 +1,18 @@
-
 // src/lib/firebase/config.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// This is a placeholder for the Firebase config object.
-// In a real application, you would replace this with your actual
-// Firebase project configuration.
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-  projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-  storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID",
+  apiKey: "AIzaSyACMQ1QYnliFM88wFJsPelokruZGSZZqlM",
+  authDomain: "charta-d1001.firebaseapp.com",
+  projectId: "charta-d1001",
+  storageBucket: "charta-d1001.firebasestorage.app",
+  messagingSenderId: "784926701355",
+  appId: "1:784926701355:web:59f80bcba2d7463ad0776e",
+  measurementId: "G-49ZL6GWP7Y"
 };
+
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
