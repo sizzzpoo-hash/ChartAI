@@ -1,9 +1,10 @@
+
 "use client";
 
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, History, Settings, Bot } from "lucide-react";
+import { Home, History, Settings, Bot, User, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +20,16 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -28,6 +39,12 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+
+  const getInitials = (email: string | null | undefined) => {
+    if (!email) return "U";
+    return email.charAt(0).toUpperCase();
+  };
 
   return (
     <SidebarProvider>
@@ -61,8 +78,41 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
-          {/* Footer content can go here */}
+        <SidebarFooter className="p-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start items-center gap-2 p-2 h-auto">
+                 <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.photoURL ?? undefined} alt="User avatar" />
+                  <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
+                </Avatar>
+                <div className="text-left group-data-[collapsible=icon]:hidden">
+                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">My Account</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/account">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Account</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => signOut()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
