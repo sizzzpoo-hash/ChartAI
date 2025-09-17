@@ -11,6 +11,13 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const GetFundamentalAnalysisOutputSchema = z.object({
+  regulatoryNews: z.string().describe('A summary of recent news related to regulatory changes or government involvement for the asset in the last 7 days.'),
+  institutionalAdoption: z.string().describe('A summary of any recent news or reports on institutional adoption, major investments, or significant wallet movements.'),
+  marketSentiment: z.string().describe('A summary of the current market sentiment (e.g., bullish, bearish, neutral) based on social media trends and news headlines.'),
+  overallSummary: z.string().describe('A concise, one-sentence overall summary of the fundamental outlook for the asset.'),
+});
+
 const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
   chartDataUri: z
     .string()
@@ -29,9 +36,7 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
   detailedAnalysis: z
     .boolean()
     .describe('Whether to provide a detailed step-by-step analysis or just a brief summary.'),
-  fundamentalAnalysisSummary: z
-    .string()
-    .optional()
+  fundamentalAnalysis: GetFundamentalAnalysisOutputSchema.optional()
     .describe('An optional summary of recent news and market sentiment for the asset.'),
 }).catchall(z.string().describe(
     "Additional candlestick chart images for other timeframes as a data URI. The key should be in the format 'chartDataUri_<timeframe>', e.g., 'chartDataUri_1d'."
@@ -71,8 +76,12 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
 1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations.
 2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
 3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified.
-{{#if fundamentalAnalysisSummary}}
-4.  **Consider Fundamental Context:** Review the provided fundamental analysis summary. Does it support or contradict the technical picture? Note how this influences your bias.
+{{#if fundamentalAnalysis}}
+4.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
+    - Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
+    - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
+    - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
+    - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
 5.  **Synthesize and Conclude:** Synthesize your findings. State whether the timeframes are aligned or conflicting. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
@@ -95,7 +104,13 @@ Primary Chart: {{media url=chartDataUri}}
 {{#if chartDataUri_15m}}15 Minute Chart: {{media url=chartDataUri_15m}}{{/if}}
 Primary Chart OHLC Data: {{{ohlcData}}}
 Primary Chart Technical Indicator Data: {{{indicatorData}}}
-{{#if fundamentalAnalysisSummary}}Fundamental Analysis Summary: {{{fundamentalAnalysisSummary}}}{{/if}}
+{{#if fundamentalAnalysis}}
+**Fundamental Analysis:**
+- Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
+- Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
+- Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
+- Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
+{{/if}}
 `,
   config: {
     safetySettings: [

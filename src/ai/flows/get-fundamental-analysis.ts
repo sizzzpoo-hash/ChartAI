@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Retrieves and summarizes fundamental analysis for a crypto asset.
@@ -17,7 +18,10 @@ const GetFundamentalAnalysisInputSchema = z.object({
 export type GetFundamentalAnalysisInput = z.infer<typeof GetFundamentalAnalysisInputSchema>;
 
 const GetFundamentalAnalysisOutputSchema = z.object({
-  summary: z.string().describe('A concise summary of the recent news and market sentiment.'),
+  regulatoryNews: z.string().describe('A summary of recent news related to regulatory changes or government involvement for the asset in the last 7 days.'),
+  institutionalAdoption: z.string().describe('A summary of any recent news or reports on institutional adoption, major investments, or significant wallet movements.'),
+  marketSentiment: z.string().describe('A summary of the current market sentiment (e.g., bullish, bearish, neutral) based on social media trends and news headlines.'),
+  overallSummary: z.string().describe('A concise, one-sentence overall summary of the fundamental outlook for the asset.'),
 });
 export type GetFundamentalAnalysisOutput = z.infer<typeof GetFundamentalAnalysisOutputSchema>;
 
@@ -31,11 +35,16 @@ const fundamentalAnalysisPrompt = ai.definePrompt({
   name: 'fundamentalAnalysisPrompt',
   input: {schema: GetFundamentalAnalysisInputSchema},
   output: {schema: GetFundamentalAnalysisOutputSchema},
-  prompt: `You are a financial news analyst. Your task is to provide a concise summary of the recent news and overall market sentiment for the following cryptocurrency: {{{symbol}}}.
+  prompt: `You are a financial news analyst for the cryptocurrency market. Your task is to use the search tool to find and summarize the most critical fundamental information for {{{symbol}}}.
 
-Focus on key news events, market trends, and any significant positive or negative sentiment that could impact the price. Keep the summary to 2-3 sentences.`,
+Provide targeted summaries for the following specific categories. If you cannot find relevant information for a category, state "No significant news found."
+
+1.  **Regulatory News:** Summarize any news related to regulatory changes, government discussions, or legal matters impacting the asset in the last 7 days.
+2.  **Institutional Adoption:** Summarize any recent news, announcements, or reports regarding institutional investment, partnerships, or large-scale adoption.
+3.  **Market Sentiment:** Based on news headlines and social media, what is the current overall market sentiment (e.g., Bullish, Bearish, Neutral with caution)?
+4.  **Overall Summary:** Provide a final, one-sentence summary of the fundamental outlook.`,
   tools: [googleAI.googleSearchTool],
-  model: googleAI('gemini-2.5-flash-lite'),
+  model: 'googleai/gemini-2.5-flash',
 });
 
 const getFundamentalAnalysisFlow = ai.defineFlow(
@@ -47,10 +56,20 @@ const getFundamentalAnalysisFlow = ai.defineFlow(
   async input => {
     try {
       const {output} = await fundamentalAnalysisPrompt(input);
-      return output || { summary: 'No fundamental analysis available at this time.' };
+      return output || { 
+          regulatoryNews: 'No significant news found.',
+          institutionalAdoption: 'No significant news found.',
+          marketSentiment: 'Neutral',
+          overallSummary: 'No strong fundamental signals detected at this time.'
+      };
     } catch (error) {
       console.warn('Failed to get fundamental analysis:', error);
-      return { summary: 'Unable to retrieve fundamental analysis at this time.' };
+      return { 
+          regulatoryNews: 'Error retrieving data.',
+          institutionalAdoption: 'Error retrieving data.',
+          marketSentiment: 'Unknown',
+          overallSummary: 'Unable to retrieve fundamental analysis at this time.'
+      };
     }
   }
 );

@@ -1,7 +1,7 @@
 
 "use server";
 import { analyzeChartAndGenerateTradeSignal } from "@/ai/flows/analyze-chart-and-generate-trade-signal";
-import { getFundamentalAnalysis } from "@/ai/flows/get-fundamental-analysis";
+import { getFundamentalAnalysis, type GetFundamentalAnalysisOutput } from "@/ai/flows/get-fundamental-analysis";
 import type { AiPreferences } from "@/lib/types";
 
 export async function getAnalysis(
@@ -13,17 +13,16 @@ export async function getAnalysis(
     multiTimeframeData?: { [key: string]: string }
 ) {
   try {
-    let fundamentalAnalysisSummary: string | undefined = undefined;
+    let fundamentalAnalysis: GetFundamentalAnalysisOutput | undefined = undefined;
     
     // If a symbol is provided, fetch fundamental analysis
     if (symbol) {
       try {
-        const fundamentalData = await getFundamentalAnalysis({ symbol });
-        fundamentalAnalysisSummary = fundamentalData?.summary || undefined;
+        fundamentalAnalysis = await getFundamentalAnalysis({ symbol });
       } catch (fundamentalError) {
         console.warn("Failed to get fundamental analysis, continuing without it:", fundamentalError);
         // Continue without fundamental analysis rather than failing completely
-        fundamentalAnalysisSummary = undefined;
+        fundamentalAnalysis = undefined;
       }
     }
 
@@ -33,7 +32,7 @@ export async function getAnalysis(
       indicatorData,
       riskProfile: preferences.riskProfile,
       detailedAnalysis: preferences.detailedAnalysis,
-      fundamentalAnalysisSummary,
+      fundamentalAnalysis,
       ...multiTimeframeData,
     });
     return { success: true, data: result };
