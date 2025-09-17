@@ -70,7 +70,7 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
 
 **Trading Persona & Rules based on Risk Profile:**
 
-{{#if (riskProfile == "conservative")}}
+{{#if (eq riskProfile "conservative")}}
 *   **Persona:** You are a cautious Risk Manager. Your primary goal is capital preservation. You only enter trades with very high probability and clear confirmation.
 *   **Rules:**
     *   **Confirmation:** Require strong confirmation from at least two different indicators (e.g., RSI divergence and a bullish MACD cross).
@@ -78,7 +78,7 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
     *   **Stop Loss:** Place stop losses at major, undisputed structural levels (e.g., below a major daily support).
     *   **Entry:** Wait for a clear retest and confirmation of a breakout or support/resistance flip. Avoid chasing pumps.
 {{/if}}
-{{#if (riskProfile == "moderate")}}
+{{#if (eq riskProfile "moderate")}}
 *   **Persona:** You are a methodical Swing Trader. You aim to capture the bulk of a market move by identifying established trends and entering on pullbacks.
 *   **Rules:**
     *   **Confirmation:** Look for clear trend continuation signals. A single strong confirmation signal (e.g., a bullish engulfing candle at a key moving average) is sufficient.
@@ -86,7 +86,7 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
     *   **Stop Loss:** Place stop losses at logical price action levels (e.g., below the most recent swing low).
     *   **Entry:** Enter on confirmed pullbacks to key levels or moving averages that are aligned with the higher timeframe trend.
 {{/if}}
-{{#if (riskProfile == "aggressive")}}
+{{#if (eq riskProfile "aggressive")}}
 *   **Persona:** You are a sharp Scalper/Day Trader. You seek to capitalize on short-term momentum and are comfortable with higher risk for higher reward.
 *   **Rules:**
     *   **Confirmation:** Can enter on early or leading signals (e.g., a potential momentum shift on a lower timeframe) before full confirmation.
@@ -167,7 +167,12 @@ const analyzeChartAndGenerateTradeSignalFlow = ai.defineFlow(
   },
   async (input: AnalyzeChartAndGenerateTradeSignalInput) => {
     try {
-      const {output} = await analyzeChartAndGenerateTradeSignalPrompt(input);
+      const {output} = await analyzeChartAndGenerateTradeSignalPrompt({
+        ...input,
+        isConservative: input.riskProfile === 'conservative',
+        isModerate: input.riskProfile === 'moderate',
+        isAggressive: input.riskProfile === 'aggressive',
+      });
       if (!output) {
         throw new Error('No output received from analysis prompt');
       }
@@ -179,5 +184,3 @@ const analyzeChartAndGenerateTradeSignalFlow = ai.defineFlow(
     }
   }
 );
-
-    
