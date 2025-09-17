@@ -40,7 +40,8 @@ export type AnalyzeChartAndGenerateTradeSignalInput =
   z.infer<typeof AnalyzeChartAndGenerateTradeSignalInputSchema>;
 
 const AnalyzeChartAndGenerateTradeSignalOutputSchema = z.object({
-  analysisSummary: z.string().describe('A step-by-step summary of the candlestick chart analysis, including trend, support/resistance, and key patterns. If no clear signal is found, explain why.'),
+  reasoning: z.string().describe("The AI's detailed, step-by-step chain of thought during the analysis process. This should outline the observations and logic used to arrive at the final conclusion."),
+  analysisSummary: z.string().describe('A concise, final summary of the analysis, derived from the reasoning process. If no clear signal is found, explain why.'),
   tradeSignal: z.object({
     entryPriceRange: z.string().describe('The recommended entry price range. If no signal, state "N/A".'),
     takeProfitLevels: z.array(z.string()).describe('The recommended take profit levels. If no signal, return an empty array.'),
@@ -62,43 +63,39 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
   output: {schema: AnalyzeChartAndGenerateTradeSignalOutputSchema},
   prompt: `You are an expert crypto currency chart analyst using multi-timeframe analysis. Your trading style will adapt based on the user's provided risk profile: {{{riskProfile}}}.
 
-You will be provided with a primary chart and potentially several other charts from different timeframes.
+**Process:**
+FIRST, you MUST conduct a detailed "Chain of Thought" analysis. Document every step of your reasoning in the 'reasoning' output field.
+SECOND, based *only* on the conclusions from your reasoning, generate the final 'analysisSummary' and 'tradeSignal'.
 
-**Analysis Process:**
-1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation).
-2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Levels that appear on multiple timeframes are more significant.
-3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified in the previous step.
+**Chain of Thought Analysis (for the 'reasoning' field):**
+1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations.
+2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
+3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified.
 {{#if fundamentalAnalysisSummary}}
-4.  **Consider Fundamental Context:** Review the provided fundamental analysis summary. Use this information to either strengthen your conviction in a technical signal or to exercise caution if the fundamentals contradict the technicals.
+4.  **Consider Fundamental Context:** Review the provided fundamental analysis summary. Does it support or contradict the technical picture? Note how this influences your bias.
 {{/if}}
-5.  **Synthesize and Summarize:** Provide a summary of your multi-timeframe findings. Explain how the higher timeframe context influences your analysis of the primary timeframe. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
-6.  **Generate a Trade Signal:** If a high-probability setup is identified where multiple timeframes align, provide a clear trade signal tailored to the '{{{riskProfile}}}' risk profile. The signal should be based on the primary chart, but confirmed by the context from the other timeframes.
-    - **Conservative:** Focus on strong confirmation signals, wider stop losses placed at major structural levels, and more achievable take profit levels. Lower risk-to-reward is acceptable (e.g., 1:1.5).
-    - **Moderate:** A balanced approach. Look for clear signals with good confirmation. Use logical stop losses and aim for a risk-to-reward ratio of at least 1:2.
-    - **Aggressive:** Willing to enter trades on early signals or weaker confirmations. Use tighter stop losses to maximize potential reward, and set more ambitious take profit levels, aiming for a risk-to-reward ratio of 1:3 or higher.
+5.  **Synthesize and Conclude:** Synthesize your findings. State whether the timeframes are aligned or conflicting. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
-**IMPORTANT:** If no clear opportunity exists or if timeframes are conflicting, you MUST still provide a response. In the 'analysisSummary', explain why no signal is available (e.g., "market is consolidating," "conflicting signals between timeframes"). For the 'tradeSignal', set 'entryPriceRange' and 'stopLoss' to "N/A", and 'takeProfitLevels' to an empty array.
+**Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
+-   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
+-   **Trade Signal:** If your reasoning concluded with a high-probability setup, provide a clear trade signal tailored to the '{{{riskProfile}}}' risk profile.
+    - **Conservative:** Focus on strong confirmation signals, wider stop losses at major structural levels, and achievable take profit levels. Lower risk-to-reward is acceptable (e.g., 1:1.5).
+    - **Moderate:** Balanced approach. Look for clear signals with good confirmation. Use logical stop losses and aim for a risk-to-reward of at least 1:2.
+    - **Aggressive:** Enter on early signals. Use tighter stop losses to maximize reward, aiming for a risk-to-reward of 1:3 or higher.
 
-Use the OHLC and indicator data as the primary source for precise price points on the main chart. Use all chart images for visual confirmation.
+**IMPORTANT:** If your reasoning finds no clear opportunity or conflicting signals, you MUST still provide a full response. In 'reasoning', explain why. In 'analysisSummary', state the conclusion (e.g., "Market is consolidating with conflicting signals"). For 'tradeSignal', set 'entryPriceRange' and 'stopLoss' to "N/A", and 'takeProfitLevels' to an empty array.
+
+Use OHLC and indicator data for precise price points. Use chart images for visual confirmation.
 
 **Data Provided:**
-
 Primary Chart: {{media url=chartDataUri}}
 {{#if chartDataUri_1d}}1 Day Chart: {{media url=chartDataUri_1d}}{{/if}}
 {{#if chartDataUri_4h}}4 Hour Chart: {{media url=chartDataUri_4h}}{{/if}}
 {{#if chartDataUri_1h}}1 Hour Chart: {{media url=chartDataUri_1h}}{{/if}}
 {{#if chartDataUri_15m}}15 Minute Chart: {{media url=chartDataUri_15m}}{{/if}}
-
-Primary Chart OHLC Data:
-{{{ohlcData}}}
-
-Primary Chart Technical Indicator Data:
-{{{indicatorData}}}
-{{#if fundamentalAnalysisSummary}}
-
-Fundamental Analysis Summary:
-{{{fundamentalAnalysisSummary}}}
-{{/if}}
+Primary Chart OHLC Data: {{{ohlcData}}}
+Primary Chart Technical Indicator Data: {{{indicatorData}}}
+{{#if fundamentalAnalysisSummary}}Fundamental Analysis Summary: {{{fundamentalAnalysisSummary}}}{{/if}}
 `,
   config: {
     safetySettings: [

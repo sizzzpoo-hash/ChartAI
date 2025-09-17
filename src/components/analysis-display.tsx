@@ -1,4 +1,4 @@
-import { BotMessageSquare, Sparkles } from "lucide-react";
+import { BotMessageSquare, Sparkles, Workflow } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -24,16 +24,27 @@ export default function AnalysisDisplay({ result, defaultOpen = false }: Analysi
           AI Analysis
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <Accordion type="single" collapsible defaultValue={defaultOpen ? "item-1" : undefined}>
-          <AccordionItem value="item-1">
+      <CardContent className="space-y-6">
+        <Accordion type="multiple" defaultValue={defaultOpen ? ["summary", "reasoning"] : []}>
+          <AccordionItem value="summary">
             <AccordionTrigger className="text-lg font-semibold">
               Analysis Summary
             </AccordionTrigger>
-            <AccordionContent className="text-base leading-relaxed pt-2">
+            <AccordionContent className="text-base leading-relaxed pt-2 whitespace-pre-wrap">
               {analysis.analysisSummary}
             </AccordionContent>
           </AccordionItem>
+          {analysis.reasoning && (
+            <AccordionItem value="reasoning">
+              <AccordionTrigger className="text-lg font-semibold">
+                <Workflow className="mr-2 h-5 w-5 text-muted-foreground" />
+                AI's Thought Process
+              </AccordionTrigger>
+              <AccordionContent className="text-base leading-relaxed pt-2 whitespace-pre-wrap font-code">
+                {analysis.reasoning}
+              </AccordionContent>
+            </AccordionItem>
+          )}
         </Accordion>
         
         <div>

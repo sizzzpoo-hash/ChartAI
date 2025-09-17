@@ -3,7 +3,7 @@ import type { AnalyzeChartAndGenerateTradeSignalOutput } from "@/ai/flows/analyz
 export type AnalysisResult = {
   id: string;
   timestamp: string;
-  analysis: AnalyzeChartAndGenerateTradeSignalOutput;
+  analysis: AnalyzeChartAndGenerateTradeSignalOutput & { reasoning?: string };
   chartImage: string;
 };
 
