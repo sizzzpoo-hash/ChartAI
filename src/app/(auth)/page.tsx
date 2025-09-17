@@ -61,14 +61,15 @@ export default function Home() {
       const result = await getAnalysis(chartDataUri, ohlcData, indicatorData, preferences);
 
       if (result.success && result.data) {
-        const newAnalysis: AnalysisResult = {
-          id: new Date().toISOString(),
+        const newAnalysis: Omit<AnalysisResult, "id"> = {
           timestamp: new Date().toISOString(),
           analysis: result.data,
           chartImage: chartDataUri,
         };
-        setAnalysis(newAnalysis);
-        addAnalysis(newAnalysis);
+        // The addAnalysis hook will create the ID and update the state
+        await addAnalysis(newAnalysis);
+        // We set the local state for immediate display. The ID isn't crucial here.
+        setAnalysis({ ...newAnalysis, id: new Date().toISOString() });
       } else {
         toast({
           variant: "destructive",

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { History, Trash2 } from "lucide-react";
+import { History, Loader2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { format } from "date-fns";
 
@@ -10,9 +10,60 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AnalysisDisplay from "@/components/analysis-display";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HistoryPage() {
-  const { history, clearHistory } = useAnalysisHistory();
+  const { history, clearHistory, isLoading } = useAnalysisHistory();
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+         <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+        </div>
+      );
+    }
+
+    if (history.length > 0) {
+      return (
+        <Accordion type="single" collapsible className="w-full">
+          {history.map((item) => (
+            <AccordionItem value={item.id} key={item.id}>
+              <AccordionTrigger>
+                <div className="flex items-center gap-4">
+                  <History className="h-5 w-5 text-primary" />
+                  <span className="font-medium">
+                    Analysis from {format(new Date(item.timestamp), "PPP p")}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 space-y-6">
+                 <div className="rounded-lg overflow-hidden border">
+                    <Image
+                        src={item.chartImage}
+                        alt="Candlestick chart analysis"
+                        width={800}
+                        height={450}
+                        className="w-full h-auto"
+                    />
+                 </div>
+                <AnalysisDisplay result={item} defaultOpen={true} />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      );
+    }
+
+    return (
+       <div className="text-center text-muted-foreground py-12">
+        <p className="text-lg">No history yet.</p>
+        <p>Your past analyses will appear here after you run them on the main page.</p>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -34,39 +85,7 @@ export default function HistoryPage() {
           )}
         </CardHeader>
         <CardContent>
-          {history.length > 0 ? (
-            <Accordion type="single" collapsible className="w-full">
-              {history.map((item) => (
-                <AccordionItem value={item.id} key={item.id}>
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-4">
-                      <History className="h-5 w-5 text-primary" />
-                      <span className="font-medium">
-                        Analysis from {format(new Date(item.timestamp), "PPP p")}
-                      </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 space-y-6">
-                     <div className="rounded-lg overflow-hidden border">
-                        <Image
-                            src={item.chartImage}
-                            alt="Candlestick chart analysis"
-                            width={800}
-                            height={450}
-                            className="w-full h-auto"
-                        />
-                     </div>
-                    <AnalysisDisplay result={item} defaultOpen={true} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-            <div className="text-center text-muted-foreground py-12">
-              <p className="text-lg">No history yet.</p>
-              <p>Your past analyses will appear here after you run them on the main page.</p>
-            </div>
-          )}
+          {renderContent()}
         </CardContent>
       </Card>
     </div>
