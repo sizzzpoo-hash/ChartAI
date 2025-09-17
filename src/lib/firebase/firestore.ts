@@ -13,10 +13,11 @@ service cloud.firestore {
     // analysisHistory collection
     match /analysisHistory/{docId} {
       // Allow users to read, create, and delete their own history documents.
-      allow read, create, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       
       // Allow users to query/list their own documents.
-      allow list: if request.auth != null && request.auth.uid == request.query.resource.data.userId;
+      allow list: if request.auth != null && request.query.resource.data.userId == request.auth.uid;
     }
   }
 }
