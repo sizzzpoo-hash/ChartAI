@@ -45,7 +45,12 @@ const getFundamentalAnalysisFlow = ai.defineFlow(
     outputSchema: GetFundamentalAnalysisOutputSchema,
   },
   async input => {
-    const {output} = await fundamentalAnalysisPrompt(input);
-    return output!;
+    try {
+      const {output} = await fundamentalAnalysisPrompt(input);
+      return output || { summary: 'No fundamental analysis available at this time.' };
+    } catch (error) {
+      console.warn('Failed to get fundamental analysis:', error);
+      return { summary: 'Unable to retrieve fundamental analysis at this time.' };
+    }
   }
 );

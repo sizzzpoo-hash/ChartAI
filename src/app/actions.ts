@@ -1,3 +1,4 @@
+
 "use server";
 import { analyzeChartAndGenerateTradeSignal } from "@/ai/flows/analyze-chart-and-generate-trade-signal";
 import { getFundamentalAnalysis } from "@/ai/flows/get-fundamental-analysis";
@@ -8,15 +9,22 @@ export async function getAnalysis(
     ohlcData: string, 
     indicatorData: string, 
     preferences: AiPreferences,
-    symbol?: string
+    symbol?: string,
+    multiTimeframeData?: { [key: string]: string }
 ) {
   try {
     let fundamentalAnalysisSummary: string | undefined = undefined;
     
     // If a symbol is provided, fetch fundamental analysis
     if (symbol) {
-      const fundamentalData = await getFundamentalAnalysis({ symbol });
-      fundamentalAnalysisSummary = fundamentalData.summary;
+      try {
+        const fundamentalData = await getFundamentalAnalysis({ symbol });
+        fundamentalAnalysisSummary = fundamentalData?.summary || undefined;
+      } catch (fundamentalError) {
+        console.warn("Failed to get fundamental analysis, continuing without it:", fundamentalError);
+        // Continue without fundamental analysis rather than failing completely
+        fundamentalAnalysisSummary = undefined;
+      }
     }
 
     const result = await analyzeChartAndGenerateTradeSignal({ 
@@ -26,6 +34,7 @@ export async function getAnalysis(
       riskProfile: preferences.riskProfile,
       detailedAnalysis: preferences.detailedAnalysis,
       fundamentalAnalysisSummary,
+      ...multiTimeframeData,
     });
     return { success: true, data: result };
   } catch (error) {

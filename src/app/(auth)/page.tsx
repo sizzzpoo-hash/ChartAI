@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
 
 const timeframes = [
@@ -24,6 +25,12 @@ const timeframes = [
   { value: "4h", label: "4 Hours" },
   { value: "1d", label: "1 Day" },
   { value: "1w", label: "1 Week" },
+];
+
+const multiTimeframeOptions = [
+  { id: "1d", label: "1 Day" },
+  { id: "4h", label: "4 Hours" },
+  { id: "1h", label: "1 Hour" },
 ];
 
 const symbols = [
@@ -46,9 +53,11 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [symbol, setSymbol] = useState("BTCUSDT");
-  const [timeframe, setTimeframe] = useState("1d");
+  const [primaryTimeframe, setPrimaryTimeframe] = useState("4h");
   const [indicator, setIndicator] = useState("all");
   const [includeFundamentals, setIncludeFundamentals] = useState(true);
+  const [additionalTimeframes, setAdditionalTimeframes] = useState<string[]>(["1d", "1h"]);
+  
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
   const { toast } = useToast();
@@ -60,26 +69,37 @@ export default function Home() {
     setAnalysis(null);
 
     try {
-      const chartDataUri = await chartRef.current.takeScreenshot();
+      // Capture data for the primary timeframe
+      const primaryChartDataUri = await chartRef.current.takeScreenshot();
       const ohlcData = JSON.stringify(chartRef.current.getChartData());
       const indicatorData = JSON.stringify(chartRef.current.getIndicatorData());
+
+      const multiTimeframeData: { [key: string]: string } = {};
+
+      // Capture screenshots for additional timeframes
+      for (const tf of additionalTimeframes) {
+        if (tf !== primaryTimeframe) {
+          const dataUri = await chartRef.current.getTimeframeData(tf, getIndicatorFlags());
+          multiTimeframeData[`chartDataUri_${tf.replace(/\s+/g, '')}`] = dataUri;
+        }
+      }
+
       const result = await getAnalysis(
-        chartDataUri,
+        primaryChartDataUri,
         ohlcData,
         indicatorData,
         preferences,
-        includeFundamentals ? symbol : undefined
+        includeFundamentals ? symbol : undefined,
+        multiTimeframeData
       );
 
       if (result.success && result.data) {
         const newAnalysis: Omit<AnalysisResult, "id"> = {
           timestamp: new Date().toISOString(),
           analysis: result.data,
-          chartImage: chartDataUri,
+          chartImage: primaryChartDataUri,
         };
-        // The addAnalysis hook will create the ID and update the state
         await addAnalysis(newAnalysis);
-        // We set the local state for immediate display. The ID isn't crucial here.
         setAnalysis({ ...newAnalysis, id: new Date().toISOString() });
       } else {
         toast({
@@ -108,6 +128,16 @@ export default function Home() {
     }
   }
 
+  const handleTimeframeCheckbox = (timeframeId: string, checked: boolean) => {
+    setAdditionalTimeframes(prev => {
+      if (checked) {
+        return [...prev, timeframeId];
+      } else {
+        return prev.filter(tf => tf !== timeframeId);
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -120,7 +150,7 @@ export default function Home() {
       <Card>
         <CardContent className="p-0">
           <div className="p-4 border-b flex flex-wrap gap-4 justify-start items-center">
-            <div className="grid gap-1.5 w-full sm:w-auto">
+             <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="symbol-select">Symbol</Label>
               <Select value={symbol} onValueChange={setSymbol}>
                 <SelectTrigger id="symbol-select" className="w-full sm:w-[180px]">
@@ -135,9 +165,9 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-1.5 w-full sm:w-auto">
-              <Label htmlFor="timeframe-select">Timeframe</Label>
-              <Select value={timeframe} onValueChange={setTimeframe}>
+             <div className="grid gap-1.5 w-full sm:w-auto">
+              <Label htmlFor="timeframe-select">Primary Timeframe</Label>
+              <Select value={primaryTimeframe} onValueChange={setPrimaryTimeframe}>
                 <SelectTrigger id="timeframe-select" className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Select timeframe" />
                 </SelectTrigger>
@@ -150,7 +180,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-1.5 w-full sm:w-auto">
+             <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="indicator-select">Indicator</Label>
               <Select value={indicator} onValueChange={setIndicator}>
                 <SelectTrigger id="indicator-select" className="w-full sm:w-[180px]">
@@ -165,19 +195,39 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2 self-end pb-2">
+          </div>
+          <div className="p-4 border-b flex flex-wrap gap-x-6 gap-y-4 justify-start items-center">
+             <div className="flex items-center space-x-2 self-end">
                 <Switch 
                   id="fundamentals-switch" 
                   checked={includeFundamentals}
                   onCheckedChange={setIncludeFundamentals}
                 />
-                <Label htmlFor="fundamentals-switch">Include News</Label>
+                <Label htmlFor="fundamentals-switch">Include News Analysis</Label>
+            </div>
+             <div className="flex items-center gap-4">
+               <Label>Additional Timeframes:</Label>
+              <div className="flex items-center gap-4">
+                {multiTimeframeOptions.map((tf) => (
+                  <div key={tf.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`tf-${tf.id}`}
+                      checked={additionalTimeframes.includes(tf.id)}
+                      onCheckedChange={(checked) => handleTimeframeCheckbox(tf.id, !!checked)}
+                      disabled={primaryTimeframe === tf.id}
+                    />
+                    <Label htmlFor={`tf-${tf.id}`} className="font-normal">
+                      {tf.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <TradingViewChart 
             ref={chartRef} 
             symbol={symbol} 
-            timeframe={timeframe}
+            timeframe={primaryTimeframe}
             indicators={getIndicatorFlags()}
           />
         </CardContent>

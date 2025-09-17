@@ -11,6 +11,8 @@ import {
   LineData,
   HistogramData,
   LayoutOptions,
+  DeepPartial,
+  ChartOptions,
 } from "lightweight-charts";
 import React, {
   useRef,
@@ -18,6 +20,7 @@ import React, {
   useImperativeHandle,
   forwardRef,
   useState,
+  useCallback,
 } from "react";
 import { Skeleton } from "./ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
@@ -36,6 +39,7 @@ export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
   getChartData: () => CandlestickData[];
   getIndicatorData: () => IndicatorData;
+  getTimeframeData: (timeframe: string, indicators: Indicators) => Promise<string>;
 }
 
 interface Indicators {
@@ -175,15 +179,18 @@ const calculateMACD = (data: CandlestickData[], fast: number, slow: number, sign
     return { macdLine, signalLine, histogram };
 };
 
-const darkThemeOptions: Partial<LayoutOptions> = {
-  textColor: '#D1D5DB',
-  background: { type: ColorType.Solid, color: "transparent" },
-};
-
-const lightThemeOptions: Partial<LayoutOptions> = {
-  textColor: '#1F2937',
-  background: { type: ColorType.Solid, color: "transparent" },
-};
+const getThemeOptions = (theme: string | undefined): DeepPartial<ChartOptions> => ({
+  layout: {
+    textColor: theme === 'dark' ? '#D1D5DB' : '#1F2937',
+    background: { type: ColorType.Solid, color: "transparent" },
+  },
+  grid: {
+    vertLines: { color: 'rgba(197, 203, 206, 0.2)' },
+    horzLines: { color: 'rgba(197, 203, 206, 0.2)' },
+  },
+  timeScale: { borderColor: 'rgba(197, 203, 206, 0.4)' },
+  rightPriceScale: { borderColor: 'rgba(197, 203, 206, 0.4)' },
+});
 
 export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChartProps>(
   ({ symbol, timeframe, indicators }, ref) => {
@@ -204,10 +211,10 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     const [error, setError] = useState<string | null>(null);
     const [chartData, setChartData] = useState<CandlestickData[]>([]);
     const [indicatorData, setIndicatorData] = useState<IndicatorData>({});
-
+    
     useEffect(() => {
       if (chartRef.current) {
-        chartRef.current.applyOptions(theme === 'dark' ? darkThemeOptions : lightThemeOptions);
+        chartRef.current.applyOptions(getThemeOptions(theme));
       }
     }, [theme]);
     
@@ -215,15 +222,9 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
       if (!chartContainerRef.current) return;
 
       const chart = createChart(chartContainerRef.current, {
-        layout: theme === 'dark' ? darkThemeOptions : lightThemeOptions,
-        grid: {
-          vertLines: { color: 'rgba(197, 203, 206, 0.2)' },
-          horzLines: { color: 'rgba(197, 203, 206, 0.2)' },
-        },
+        ...getThemeOptions(theme),
         width: chartContainerRef.current.clientWidth,
         height: 600,
-        timeScale: { borderColor: 'rgba(197, 203, 206, 0.4)' },
-        rightPriceScale: { borderColor: 'rgba(197, 203, 206, 0.4)' },
       });
       chartRef.current = chart;
 
@@ -318,6 +319,67 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
     }, [chartData, indicators]);
 
+    const getTimeframeData = useCallback(async (newTimeframe: string, newIndicators: Indicators): Promise<string> => {
+      // Create a temporary offscreen div for rendering
+      const offscreenDiv = document.createElement('div');
+      offscreenDiv.style.position = 'absolute';
+      offscreenDiv.style.left = '-9999px';
+      offscreenDiv.style.width = '800px';
+      offscreenDiv.style.height = '450px';
+      document.body.appendChild(offscreenDiv);
+
+      const chart = createChart(offscreenDiv, {
+        ...getThemeOptions(theme),
+        width: 800,
+        height: 450,
+      });
+
+      try {
+        const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${newTimeframe}&limit=300`);
+        if (!response.ok) throw new Error(`Failed to fetch data for ${newTimeframe}: ${response.statusText}`);
+        const data: BinanceKlineData[] = await response.json();
+        const formattedData = formatBinanceData(data);
+
+        const candlestickSeries = chart.addCandlestickSeries({
+          upColor: '#3366FF', downColor: '#EF4444', borderDownColor: '#EF4444',
+          borderUpColor: '#3366FF', wickDownColor: '#EF4444', wickUpColor: '#3366FF',
+        });
+        candlestickSeries.setData(formattedData);
+
+        let paneIndex = 1;
+        if (newIndicators.sma) {
+          const smaData = calculateSMA(formattedData, 20);
+          const smaSeries = chart.addLineSeries({ color: 'orange', lineWidth: 2 });
+          smaSeries.setData(smaData);
+        }
+        if (newIndicators.rsi) {
+          const rsiData = calculateRSI(formattedData, 14);
+          const rsiSeries = chart.addLineSeries({ color: 'purple', lineWidth: 2, pane: paneIndex++ });
+          rsiSeries.setData(rsiData);
+        }
+        if (newIndicators.macd) {
+          const macdData = calculateMACD(formattedData, 12, 26, 9);
+          const macdLineSeries = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: paneIndex });
+          macdLineSeries.setData(macdData.macdLine);
+          const macdSignalSeries = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: paneIndex });
+          macdSignalSeries.setData(macdData.signalLine);
+          const macdHistSeries = chart.addHistogramSeries({ pane: paneIndex });
+          macdHistSeries.setData(macdData.histogram);
+        }
+        
+        chart.timeScale().fitContent();
+
+        // Allow a moment for the chart to render before taking a screenshot
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const canvas = chart.takeScreenshot();
+        return canvas.toDataURL("image/png");
+      } finally {
+        chart.remove();
+        document.body.removeChild(offscreenDiv);
+      }
+    }, [symbol, theme]);
+    
     useImperativeHandle(ref, () => ({
       takeScreenshot: async (): Promise<string> => {
         if (!chartRef.current) throw new Error("Chart not initialized");
@@ -329,7 +391,8 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
       },
       getIndicatorData: (): IndicatorData => {
         return indicatorData;
-      }
+      },
+      getTimeframeData,
     }));
 
     return (

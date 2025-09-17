@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Analyzes a candlestick chart and generates trade signals.
@@ -14,14 +15,14 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
   chartDataUri: z
     .string()
     .describe(
-      "A candlestick chart image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "The PRIMARY candlestick chart image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   ohlcData: z
     .string()
-    .describe('A JSON string representing an array of OHLC (Open, High, Low, Close) data points for the chart.'),
+    .describe('A JSON string representing an array of OHLC (Open, High, Low, Close) data points for the primary chart.'),
   indicatorData: z
     .string()
-    .describe('A JSON string representing calculated technical indicator data (SMA, RSI, MACD).'),
+    .describe('A JSON string representing calculated technical indicator data (SMA, RSI, MACD) for the primary chart.'),
   riskProfile: z
     .enum(['conservative', 'moderate', 'aggressive'])
     .describe('The user\'s risk profile for trading.'),
@@ -32,7 +33,9 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
     .string()
     .optional()
     .describe('An optional summary of recent news and market sentiment for the asset.'),
-});
+}).catchall(z.string().describe(
+    "Additional candlestick chart images for other timeframes as a data URI. The key should be in the format 'chartDataUri_<timeframe>', e.g., 'chartDataUri_1d'."
+));
 export type AnalyzeChartAndGenerateTradeSignalInput =
   z.infer<typeof AnalyzeChartAndGenerateTradeSignalInputSchema>;
 
@@ -57,31 +60,39 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
   name: 'analyzeChartAndGenerateTradeSignalPrompt',
   input: {schema: AnalyzeChartAndGenerateTradeSignalInputSchema},
   output: {schema: AnalyzeChartAndGenerateTradeSignalOutputSchema},
-  prompt: `You are an expert crypto currency chart analyst. Your trading style will adapt based on the user's provided risk profile: {{{riskProfile}}}.
+  prompt: `You are an expert crypto currency chart analyst using multi-timeframe analysis. Your trading style will adapt based on the user's provided risk profile: {{{riskProfile}}}.
 
-Analyze the provided chart image, OHLC data, and technical indicator data by following these steps:
-1.  **Identify the Overall Trend:** Use the OHLC data, SMA values, and the chart image to determine if the market is in an uptrend, downtrend, or consolidation on the given timeframe.
-2.  **Identify Key Levels:** Pinpoint major support and resistance levels using the OHLC data.
-3.  **Analyze Indicators & Patterns:** Look for candlestick patterns (e.g., engulfing, doji, hammer) near key levels. Use the provided RSI data to check for overbought/oversold conditions and the MACD data for momentum and potential trend reversals.
+You will be provided with a primary chart and potentially several other charts from different timeframes.
+
+**Analysis Process:**
+1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation).
+2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Levels that appear on multiple timeframes are more significant.
+3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified in the previous step.
 {{#if fundamentalAnalysisSummary}}
 4.  **Consider Fundamental Context:** Review the provided fundamental analysis summary. Use this information to either strengthen your conviction in a technical signal or to exercise caution if the fundamentals contradict the technicals.
 {{/if}}
-5.  **Synthesize and Summarize:** Provide a summary of your findings. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown of your analysis.{{else}}Provide a brief, concise summary of the key findings.{{/if}}
-6.  **Generate a Trade Signal:** If a high-probability setup is identified, provide a clear trade signal tailored to the '{{{riskProfile}}}' risk profile.
+5.  **Synthesize and Summarize:** Provide a summary of your multi-timeframe findings. Explain how the higher timeframe context influences your analysis of the primary timeframe. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
+6.  **Generate a Trade Signal:** If a high-probability setup is identified where multiple timeframes align, provide a clear trade signal tailored to the '{{{riskProfile}}}' risk profile. The signal should be based on the primary chart, but confirmed by the context from the other timeframes.
     - **Conservative:** Focus on strong confirmation signals, wider stop losses placed at major structural levels, and more achievable take profit levels. Lower risk-to-reward is acceptable (e.g., 1:1.5).
     - **Moderate:** A balanced approach. Look for clear signals with good confirmation. Use logical stop losses and aim for a risk-to-reward ratio of at least 1:2.
     - **Aggressive:** Willing to enter trades on early signals or weaker confirmations. Use tighter stop losses to maximize potential reward, and set more ambitious take profit levels, aiming for a risk-to-reward ratio of 1:3 or higher.
 
-If no clear opportunity exists, state that and do not provide a trade signal.
+If no clear opportunity exists or if timeframes are conflicting, state that and do not provide a trade signal.
 
-Use the OHLC and indicator data as the primary source for precise price points and calculations. Use the chart image for visual confirmation of patterns and trends.
+Use the OHLC and indicator data as the primary source for precise price points on the main chart. Use all chart images for visual confirmation.
 
-Chart: {{media url=chartDataUri}}
+**Data Provided:**
 
-OHLC Data:
+Primary Chart: {{media url=chartDataUri}}
+{{#if chartDataUri_1d}}1 Day Chart: {{media url=chartDataUri_1d}}{{/if}}
+{{#if chartDataUri_4h}}4 Hour Chart: {{media url=chartDataUri_4h}}{{/if}}
+{{#if chartDataUri_1h}}1 Hour Chart: {{media url=chartDataUri_1h}}{{/if}}
+{{#if chartDataUri_15m}}15 Minute Chart: {{media url=chartDataUri_15m}}{{/if}}
+
+Primary Chart OHLC Data:
 {{{ohlcData}}}
 
-Technical Indicator Data:
+Primary Chart Technical Indicator Data:
 {{{indicatorData}}}
 {{#if fundamentalAnalysisSummary}}
 
@@ -117,8 +128,17 @@ const analyzeChartAndGenerateTradeSignalFlow = ai.defineFlow(
     inputSchema: AnalyzeChartAndGenerateTradeSignalInputSchema,
     outputSchema: AnalyzeChartAndGenerateTradeSignalOutputSchema,
   },
-  async input => {
-    const {output} = await analyzeChartAndGenerateTradeSignalPrompt(input);
-    return output!;
+  async (input: AnalyzeChartAndGenerateTradeSignalInput) => {
+    try {
+      const {output} = await analyzeChartAndGenerateTradeSignalPrompt(input);
+      if (!output) {
+        throw new Error('No output received from analysis prompt');
+      }
+      return output;
+    } catch (error) {
+      console.error('Failed to analyze chart:', error);
+      // Re-throw the error so it can be caught by the calling function
+      throw error;
+    }
   }
 );
