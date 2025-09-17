@@ -16,7 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
 
 const timeframes = [
@@ -49,6 +48,7 @@ export default function Home() {
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [timeframe, setTimeframe] = useState("1d");
   const [indicator, setIndicator] = useState("all");
+  const [includeFundamentals, setIncludeFundamentals] = useState(true);
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
   const { toast } = useToast();
@@ -63,7 +63,13 @@ export default function Home() {
       const chartDataUri = await chartRef.current.takeScreenshot();
       const ohlcData = JSON.stringify(chartRef.current.getChartData());
       const indicatorData = JSON.stringify(chartRef.current.getIndicatorData());
-      const result = await getAnalysis(chartDataUri, ohlcData, indicatorData, preferences);
+      const result = await getAnalysis(
+        chartDataUri,
+        ohlcData,
+        indicatorData,
+        preferences,
+        includeFundamentals ? symbol : undefined
+      );
 
       if (result.success && result.data) {
         const newAnalysis: Omit<AnalysisResult, "id"> = {
@@ -158,6 +164,14 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center space-x-2 self-end pb-2">
+                <Switch 
+                  id="fundamentals-switch" 
+                  checked={includeFundamentals}
+                  onCheckedChange={setIncludeFundamentals}
+                />
+                <Label htmlFor="fundamentals-switch">Include News</Label>
             </div>
           </div>
           <TradingViewChart 
