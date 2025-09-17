@@ -35,15 +35,20 @@ const symbols = [
   { value: "DOGEUSDT", label: "DOGE/USDT" },
 ];
 
+const indicatorsOptions = [
+  { value: "all", label: "All Indicators" },
+  { value: "sma", label: "SMA (20)" },
+  { value: "rsi", label: "RSI (14)" },
+  { value: "macd", label: "MACD" },
+];
+
 export default function Home() {
   const chartRef = useRef<TradingViewChartRef>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [timeframe, setTimeframe] = useState("1d");
-  const [showSMA, setShowSMA] = useState(true);
-  const [showRSI, setShowRSI] = useState(true);
-  const [showMACD, setShowMACD] = useState(true);
+  const [indicator, setIndicator] = useState("all");
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
   const { toast } = useToast();
@@ -88,6 +93,14 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+  
+  const getIndicatorFlags = () => {
+    return {
+      sma: indicator === 'all' || indicator === 'sma',
+      rsi: indicator === 'all' || indicator === 'rsi',
+      macd: indicator === 'all' || indicator === 'macd',
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -131,27 +144,27 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <Separator orientation="vertical" className="h-10 hidden sm:block" />
-             <div className="flex flex-wrap gap-4 sm:gap-6 items-center">
-                <div className="flex items-center space-x-2">
-                    <Switch id="sma-switch" checked={showSMA} onCheckedChange={setShowSMA} />
-                    <Label htmlFor="sma-switch">SMA (20)</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Switch id="rsi-switch" checked={showRSI} onCheckedChange={setShowRSI} />
-                    <Label htmlFor="rsi-switch">RSI (14)</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Switch id="macd-switch" checked={showMACD} onCheckedChange={setShowMACD} />
-                    <Label htmlFor="macd-switch">MACD</Label>
-                </div>
+            <div className="grid gap-1.5 w-full sm:w-auto">
+              <Label htmlFor="indicator-select">Indicator</Label>
+              <Select value={indicator} onValueChange={setIndicator}>
+                <SelectTrigger id="indicator-select" className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Select indicator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {indicatorsOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <TradingViewChart 
             ref={chartRef} 
             symbol={symbol} 
             timeframe={timeframe}
-            indicators={{ sma: showSMA, rsi: showRSI, macd: showMACD }}
+            indicators={getIndicatorFlags()}
           />
         </CardContent>
       </Card>
