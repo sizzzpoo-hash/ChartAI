@@ -13,6 +13,7 @@ import {
   LayoutOptions,
   DeepPartial,
   ChartOptions,
+  AreaSeriesPartialOptions,
 } from "lightweight-charts";
 import React, {
   useRef,
@@ -32,6 +33,11 @@ interface IndicatorData {
         macdLine: LineData[];
         signalLine: LineData[];
         histogram: HistogramData[];
+    };
+    bb?: {
+        upper: LineData[];
+        middle: LineData[];
+        lower: LineData[];
     }
 }
 
@@ -46,6 +52,7 @@ interface Indicators {
   sma?: boolean;
   rsi?: boolean;
   macd?: boolean;
+  bb?: boolean;
 }
 
 interface TradingViewChartProps {
@@ -84,6 +91,27 @@ const calculateSMA = (data: CandlestickData[], period: number): LineData[] => {
   }
   return result;
 };
+
+const calculateBollingerBands = (data: CandlestickData[], period: number, stdDev: number) => {
+    const upper: LineData[] = [];
+    const middle: LineData[] = [];
+    const lower: LineData[] = [];
+    
+    for (let i = period - 1; i < data.length; i++) {
+        const slice = data.slice(i - period + 1, i + 1);
+        const sum = slice.reduce((acc, val) => acc + val.close, 0);
+        const sma = sum / period;
+        
+        const variance = slice.reduce((acc, val) => acc + Math.pow(val.close - sma, 2), 0) / period;
+        const deviation = Math.sqrt(variance);
+        
+        upper.push({ time: data[i].time, value: sma + stdDev * deviation });
+        middle.push({ time: data[i].time, value: sma });
+        lower.push({ time: data[i].time, value: sma - stdDev * deviation });
+    }
+    return { upper, middle, lower };
+};
+
 
 const calculateRSI = (data: CandlestickData[], period: number): LineData[] => {
     if (data.length <= period) return [];
@@ -201,6 +229,10 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
     const seriesRef = useRef<{
         candlestick?: ISeriesApi<"Candlestick">;
         sma?: ISeriesApi<"Line">;
+        bbUpper?: ISeriesApi<"Line">;
+        bbMiddle?: ISeriesApi<"Line">;
+        bbLower?: ISeriesApi<"Line">;
+        bbArea?: ISeriesApi<"Area">;
         rsi?: ISeriesApi<"Line">;
         macdLine?: ISeriesApi<"Line">;
         macdSignal?: ISeriesApi<"Line">;
@@ -287,6 +319,21 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
           seriesRef.current.sma = chart.addLineSeries({ color: 'orange', lineWidth: 2, priceScaleId: 'right' });
           seriesRef.current.sma.setData(smaData);
         }
+        
+        // Bollinger Bands
+        if (indicators.bb) {
+          const bbData = calculateBollingerBands(chartData, 20, 2);
+          newIndicatorData.bb = bbData;
+
+          const areaData = bbData.upper.map((d, i) => ({ time: d.time, value: d.value, low: bbData.lower[i].value }));
+          
+          seriesRef.current.bbUpper = chart.addLineSeries({ color: 'rgba(51, 102, 255, 0.5)', lineWidth: 1 });
+          seriesRef.current.bbUpper.setData(bbData.upper);
+          seriesRef.current.bbMiddle = chart.addLineSeries({ color: 'rgba(255, 165, 0, 0.8)', lineWidth: 1, lineStyle: 2 });
+          seriesRef.current.bbMiddle.setData(bbData.middle);
+          seriesRef.current.bbLower = chart.addLineSeries({ color: 'rgba(51, 102, 255, 0.5)', lineWidth: 1 });
+          seriesRef.current.bbLower.setData(bbData.lower);
+        }
 
         // RSI
         if (indicators.rsi) {
@@ -351,6 +398,15 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
           const smaData = calculateSMA(formattedData, 20);
           const smaSeries = chart.addLineSeries({ color: 'orange', lineWidth: 2 });
           smaSeries.setData(smaData);
+        }
+        if (newIndicators.bb) {
+          const bbData = calculateBollingerBands(formattedData, 20, 2);
+          const bbUpper = chart.addLineSeries({ color: 'rgba(51, 102, 255, 0.5)', lineWidth: 1 });
+          bbUpper.setData(bbData.upper);
+          const bbMiddle = chart.addLineSeries({ color: 'rgba(255, 165, 0, 0.8)', lineWidth: 1, lineStyle: 2 });
+          bbMiddle.setData(bbData.middle);
+          const bbLower = chart.addLineSeries({ color: 'rgba(51, 102, 255, 0.5)', lineWidth: 1 });
+          bbLower.setData(bbData.lower);
         }
         if (newIndicators.rsi) {
           const rsiData = calculateRSI(formattedData, 14);

@@ -46,6 +46,7 @@ const indicatorsOptions = [
   { value: "sma", label: "SMA (20)" },
   { value: "rsi", label: "RSI (14)" },
   { value: "macd", label: "MACD" },
+  { value: "bb", label: "Bollinger Bands" },
 ];
 
 export default function Home() {
@@ -125,6 +126,7 @@ export default function Home() {
       sma: indicator === 'all' || indicator === 'sma',
       rsi: indicator === 'all' || indicator === 'rsi',
       macd: indicator === 'all' || indicator === 'macd',
+      bb: indicator === 'all' || indicator === 'bb',
     }
   }
 

@@ -29,7 +29,7 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
     .describe('A JSON string representing an array of OHLC (Open, High, Low, Close) data points for the primary chart.'),
   indicatorData: z
     .string()
-    .describe('A JSON string representing calculated technical indicator data (SMA, RSI, MACD) for the primary chart.'),
+    .describe('A JSON string representing calculated technical indicator data (SMA, RSI, MACD, Bollinger Bands) for the primary chart.'),
   riskProfile: z
     .enum(['conservative', 'moderate', 'aggressive'])
     .describe('The user\'s risk profile for trading.'),
@@ -76,14 +76,15 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
 1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations.
 2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
 3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified.
+4.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition?
 {{#if fundamentalAnalysis}}
-4.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
+5.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
     - Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
     - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
     - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
-5.  **Synthesize and Conclude:** Synthesize your findings. State whether the timeframes are aligned or conflicting. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
+6.  **Synthesize and Conclude:** Synthesize your findings. State whether the timeframes are aligned or conflicting. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
 **Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
 -   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
