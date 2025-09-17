@@ -40,11 +40,11 @@ export type AnalyzeChartAndGenerateTradeSignalInput =
   z.infer<typeof AnalyzeChartAndGenerateTradeSignalInputSchema>;
 
 const AnalyzeChartAndGenerateTradeSignalOutputSchema = z.object({
-  analysisSummary: z.string().describe('A step-by-step summary of the candlestick chart analysis, including trend, support/resistance, and key patterns.'),
+  analysisSummary: z.string().describe('A step-by-step summary of the candlestick chart analysis, including trend, support/resistance, and key patterns. If no clear signal is found, explain why.'),
   tradeSignal: z.object({
-    entryPriceRange: z.string().describe('The recommended entry price range.'),
-    takeProfitLevels: z.array(z.string()).describe('The recommended take profit levels.'),
-    stopLoss: z.string().describe('The recommended stop loss level, ensuring an appropriate risk/reward ratio for the given risk profile.'),
+    entryPriceRange: z.string().describe('The recommended entry price range. If no signal, state "N/A".'),
+    takeProfitLevels: z.array(z.string()).describe('The recommended take profit levels. If no signal, return an empty array.'),
+    stopLoss: z.string().describe('The recommended stop loss level, ensuring an appropriate risk/reward ratio for the given risk profile. If no signal, state "N/A".'),
   }),
 });
 export type AnalyzeChartAndGenerateTradeSignalOutput =
@@ -77,7 +77,7 @@ You will be provided with a primary chart and potentially several other charts f
     - **Moderate:** A balanced approach. Look for clear signals with good confirmation. Use logical stop losses and aim for a risk-to-reward ratio of at least 1:2.
     - **Aggressive:** Willing to enter trades on early signals or weaker confirmations. Use tighter stop losses to maximize potential reward, and set more ambitious take profit levels, aiming for a risk-to-reward ratio of 1:3 or higher.
 
-If no clear opportunity exists or if timeframes are conflicting, state that and do not provide a trade signal.
+**IMPORTANT:** If no clear opportunity exists or if timeframes are conflicting, you MUST still provide a response. In the 'analysisSummary', explain why no signal is available (e.g., "market is consolidating," "conflicting signals between timeframes"). For the 'tradeSignal', set 'entryPriceRange' and 'stopLoss' to "N/A", and 'takeProfitLevels' to an empty array.
 
 Use the OHLC and indicator data as the primary source for precise price points on the main chart. Use all chart images for visual confirmation.
 
