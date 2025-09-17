@@ -1,4 +1,27 @@
 // src/lib/firebase/firestore.ts
+/*
+================================================================================
+IMPORTANT: FIREBASE SECURITY RULES
+================================================================================
+The following security rules must be configured in your Firebase project's 
+Firestore settings to ensure users can only access their own data.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // analysisHistory collection
+    match /analysisHistory/{docId} {
+      // Allow users to read, create, and delete their own history documents.
+      allow read, create, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow users to query/list their own documents.
+      allow list: if request.auth != null && request.auth.uid == request.query.resource.data.userId;
+    }
+  }
+}
+================================================================================
+*/
 import {
   getFirestore,
   collection,
