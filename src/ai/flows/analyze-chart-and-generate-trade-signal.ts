@@ -109,10 +109,10 @@ FIRST, you MUST conduct a detailed "Chain of Thought" analysis, strictly adherin
 SECOND, based *only* on the conclusions from your reasoning, generate the final 'analysisSummary' and 'tradeSignal'.
 
 **Chain of Thought Analysis (for the 'reasoning' field):**
-1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations.
-2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
-3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified.
-4.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition?
+1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d, 4h) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations and state your directional bias. For example, "The 1d and 4h charts show a clear uptrend; therefore, I will only look for bullish (long) entry signals on the primary chart and will ignore all bearish signals."
+2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels, trendlines, and supply/demand zones across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
+3.  **Analyze the Primary Chart (For Entry):** Now focus on the primary chart ({{{chartDataUri}}}). In the context of the established macro trend, look for specific entry signals. Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified. Ensure any potential signal aligns with the directional bias from step 1.
+4.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition? This helps refine entry and exit points.
 {{#if economicEvents}}
 5.  **Check for Major Economic Events:** Review the upcoming economic events. If there is a high-impact event within the next 48 hours, you MUST mention it and explain that it is advisable to wait until after the event to enter any trade, as volatility can be unpredictable. This overrides any technical signal.
     - Upcoming Events: {{{economicEvents.eventSummary}}}
@@ -124,7 +124,7 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
     - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
-7.  **Synthesize and Conclude:** Synthesize your findings based on your trading persona. State whether the technicals, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
+7.  **Synthesize and Conclude:** Synthesize all your findings based on your trading persona. State whether the technicals, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
 **Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
 -   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
