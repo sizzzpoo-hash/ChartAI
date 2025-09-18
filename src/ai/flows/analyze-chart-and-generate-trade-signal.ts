@@ -81,7 +81,8 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
 *   **Rules:**
     *   **Confirmation:** Require strong confirmation from at least two different indicators (e.g., RSI divergence and a bullish MACD cross).
     *   **Risk/Reward:** Only take trades with a minimum risk-to-reward ratio of 1:2.
-    *   **Stop Loss:** Place stop losses at major, undisputed structural levels (e.g., below a major daily support).
+    *   **Stop Loss:** Place stop losses at major, undisputed structural levels (e.g., below a major daily support identified in your analysis). Your reasoning MUST state why this level was chosen.
+    *   **Take Profit:** Place take profit levels at key, significant resistance levels identified in your analysis.
     *   **Entry:** Wait for a clear retest and confirmation of a breakout or support/resistance flip. Avoid chasing pumps.
     *   **Invalidation:** You MUST NOT issue a trade signal if the price is trading far above a key moving average (like the 20 SMA), as it is likely overextended. You MUST ignore candlestick patterns that are not supported by a corresponding increase in trading volume.
 {{/if}}
@@ -90,7 +91,8 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
 *   **Rules:**
     *   **Confirmation:** Look for clear trend continuation signals. A single strong confirmation signal (e.g., a bullish engulfing candle at a key moving average) is sufficient.
     *   **Risk/Reward:** Aim for a risk-to-reward ratio of at least 1:2.5.
-    *   **Stop Loss:** Place stop losses at logical price action levels (e.g., below the most recent swing low).
+    *   **Stop Loss:** Place stop losses at logical price action levels (e.g., below the most recent swing low identified in your analysis). Your reasoning MUST justify this placement.
+    *   **Take Profit:** Place take profit levels at the next major swing high or resistance area.
     *   **Entry:** Enter on confirmed pullbacks to key levels or moving averages that are aligned with the higher timeframe trend.
     *   **Invalidation:** You MUST NOT enter a trade if the higher timeframe trend (e.g., daily) contradicts the signal on the primary chart. Do not trade within tight, low-volatility consolidation ranges (e.g., contracting Bollinger Bands).
 {{/if}}
@@ -99,7 +101,8 @@ const analyzeChartAndGenerateTradeSignalPrompt = ai.definePrompt({
 *   **Rules:**
     *   **Confirmation:** Can enter on early or leading signals (e.g., a potential momentum shift on a lower timeframe) before full confirmation.
     *   **Risk/Reward:** Aim for a high risk-to-reward ratio, typically 1:3 or greater.
-    *   **Stop Loss:** Use tighter stop losses to maximize potential reward, often placed just below the entry candle or a minor support level.
+    *   **Stop Loss:** Use tighter stop losses, placed just below the entry candle or a minor support level identified in the analysis. Your reasoning must explain why this tight stop is appropriate.
+    *   **Take Profit:** Target multiple, shorter-term resistance levels for take-profit points.
     *   **Entry:** Can enter on the initial breakout of a pattern or the first sign of a reversal, without waiting for a retest.
     *   **Invalidation:** You MUST NOT trade against strong momentum from a higher timeframe. For example, do not attempt to short an asset that is in a clear, powerful uptrend on the 4-hour and daily charts. Avoid signals where the volume is clearly decreasing on a breakout attempt.
 {{/if}}
@@ -110,7 +113,7 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
 
 **Chain of Thought Analysis (for the 'reasoning' field):**
 1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d, 4h) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations and state your directional bias. For example, "The 1d and 4h charts show a clear uptrend; therefore, I will only look for bullish (long) entry signals on the primary chart and will ignore all bearish signals."
-2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels, trendlines, and supply/demand zones across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
+2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels, trendlines, and supply/demand zones across all provided charts. Note levels that appear on multiple timeframes, as they are more significant. These levels will be CRITICAL for setting your stop-loss and take-profit targets later.
 3.  **Analyze the Primary Chart (For Entry):** Now focus on the primary chart ({{{chartDataUri}}}). In the context of the established macro trend, look for specific entry signals. Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified. Ensure any potential signal aligns with the directional bias from step 1.
 4.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition? This helps refine entry and exit points.
 {{#if economicEvents}}
