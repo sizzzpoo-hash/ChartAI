@@ -6,7 +6,6 @@ import {
   ColorType,
   IChartApi,
   ISeriesApi,
-  CandlestickData,
   UTCTimestamp,
   LineData,
   HistogramData,
@@ -14,6 +13,7 @@ import {
   DeepPartial,
   ChartOptions,
   AreaSeriesPartialOptions,
+  CandlestickData,
 } from "lightweight-charts";
 import React, {
   useRef,
@@ -41,9 +41,13 @@ interface IndicatorData {
     }
 }
 
+export interface CandlestickDataWithVolume extends CandlestickData {
+  volume: number;
+}
+
 export interface TradingViewChartRef {
   takeScreenshot: () => Promise<string>;
-  getChartData: () => CandlestickData[];
+  getChartData: () => CandlestickDataWithVolume[];
   getIndicatorData: () => IndicatorData;
   getTimeframeData: (timeframe: string, indicators: Indicators) => Promise<string>;
 }
@@ -59,26 +63,28 @@ interface TradingViewChartProps {
   symbol: string;
   timeframe: string;
   indicators: Indicators;
+  showVolume: boolean;
 }
 
 type BinanceKlineData = [
-  number,
-  string,
-  string,
-  string,
-  string,
-  string,
-  number,
+  number, // Open time
+  string, // Open
+  string, // High
+  string, // Low
+  string, // Close
+  string, // Volume
+  number, // Close time
   ...any[]
 ];
 
-const formatBinanceData = (data: BinanceKlineData[]): CandlestickData[] => {
+const formatBinanceData = (data: BinanceKlineData[]): CandlestickDataWithVolume[] => {
   return data.map((item) => ({
     time: (item[0] / 1000) as UTCTimestamp,
     open: parseFloat(item[1]),
     high: parseFloat(item[2]),
     low: parseFloat(item[3]),
     close: parseFloat(item[4]),
+    volume: parseFloat(item[5]),
   }));
 };
 
@@ -221,13 +227,14 @@ const getThemeOptions = (theme: string | undefined): DeepPartial<ChartOptions> =
 });
 
 export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChartProps>(
-  ({ symbol, timeframe, indicators }, ref) => {
+  ({ symbol, timeframe, indicators, showVolume }, ref) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const { theme } = useTheme();
     
     const seriesRef = useRef<{
         candlestick?: ISeriesApi<"Candlestick">;
+        volume?: ISeriesApi<"Histogram">;
         sma?: ISeriesApi<"Line">;
         bbUpper?: ISeriesApi<"Line">;
         bbMiddle?: ISeriesApi<"Line">;
@@ -241,7 +248,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [chartData, setChartData] = useState<CandlestickData[]>([]);
+    const [chartData, setChartData] = useState<CandlestickDataWithVolume[]>([]);
     const [indicatorData, setIndicatorData] = useState<IndicatorData>({});
     
     useEffect(() => {
@@ -312,6 +319,30 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         let paneIndex = 1;
 
+        // Volume
+        if (showVolume) {
+          seriesRef.current.volume = chart.addHistogramSeries({
+            pane: paneIndex,
+            priceFormat: {
+              type: 'volume',
+            },
+            priceScaleId: '',
+          });
+          const volumeData = chartData.map(d => ({
+            time: d.time,
+            value: d.volume,
+            color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+          }));
+          seriesRef.current.volume.setData(volumeData);
+          chart.priceScale('').applyOptions({
+            scaleMargins: {
+              top: 0.8, // 80% space for volume
+              bottom: 0,
+            }
+          });
+          paneIndex++;
+        }
+
         // SMA
         if (indicators.sma) {
           const smaData = calculateSMA(chartData, 20);
@@ -324,8 +355,6 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         if (indicators.bb) {
           const bbData = calculateBollingerBands(chartData, 20, 2);
           newIndicatorData.bb = bbData;
-
-          const areaData = bbData.upper.map((d, i) => ({ time: d.time, value: d.value, low: bbData.lower[i].value }));
           
           seriesRef.current.bbUpper = chart.addLineSeries({ color: 'rgba(51, 102, 255, 0.5)', lineWidth: 1 });
           seriesRef.current.bbUpper.setData(bbData.upper);
@@ -364,7 +393,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         setIndicatorData(newIndicatorData);
         chart.timeScale().fitContent();
 
-    }, [chartData, indicators]);
+    }, [chartData, indicators, showVolume]);
 
     const getTimeframeData = useCallback(async (newTimeframe: string, newIndicators: Indicators): Promise<string> => {
       // Create a temporary offscreen div for rendering
@@ -392,8 +421,21 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
           borderUpColor: '#3366FF', wickDownColor: '#EF4444', wickUpColor: '#3366FF',
         });
         candlestickSeries.setData(formattedData);
-
+        
         let paneIndex = 1;
+
+        if (showVolume) {
+          const volumeSeries = chart.addHistogramSeries({
+            pane: paneIndex++,
+            priceFormat: { type: 'volume' },
+          });
+          volumeSeries.setData(formattedData.map(d => ({
+            time: d.time,
+            value: d.volume,
+            color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+          })));
+        }
+
         if (newIndicators.sma) {
           const smaData = calculateSMA(formattedData, 20);
           const smaSeries = chart.addLineSeries({ color: 'orange', lineWidth: 2 });
@@ -434,7 +476,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         chart.remove();
         document.body.removeChild(offscreenDiv);
       }
-    }, [symbol, theme]);
+    }, [symbol, theme, showVolume]);
     
     useImperativeHandle(ref, () => ({
       takeScreenshot: async (): Promise<string> => {
@@ -442,7 +484,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         const canvas = chartRef.current.takeScreenshot();
         return canvas.toDataURL("image/png");
       },
-      getChartData: (): CandlestickData[] => {
+      getChartData: (): CandlestickDataWithVolume[] => {
         return chartData;
       },
       getIndicatorData: (): IndicatorData => {
@@ -470,3 +512,5 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 );
 
 TradingViewChart.displayName = "TradingViewChart";
+
+    

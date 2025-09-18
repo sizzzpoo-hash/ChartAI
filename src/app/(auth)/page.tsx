@@ -231,6 +231,7 @@ export default function Home() {
             symbol={symbol} 
             timeframe={primaryTimeframe}
             indicators={getIndicatorFlags()}
+            showVolume={true}
           />
         </CardContent>
       </Card>
@@ -260,3 +261,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
