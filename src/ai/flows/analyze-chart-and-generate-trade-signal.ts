@@ -18,6 +18,10 @@ const GetFundamentalAnalysisOutputSchema = z.object({
   overallSummary: z.string().describe('A concise, one-sentence overall summary of the fundamental outlook for the asset.'),
 });
 
+const GetEconomicEventsOutputSchema = z.object({
+  eventSummary: z.string().describe("A summary of major upcoming economic events in the next 48 hours that could impact the asset's price, or a statement that no major events are scheduled."),
+});
+
 const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
   chartDataUri: z
     .string()
@@ -38,6 +42,8 @@ const AnalyzeChartAndGenerateTradeSignalInputSchema = z.object({
     .describe('Whether to provide a detailed step-by-step analysis or just a brief summary.'),
   fundamentalAnalysis: GetFundamentalAnalysisOutputSchema.optional()
     .describe('An optional summary of recent news and market sentiment for the asset.'),
+  economicEvents: GetEconomicEventsOutputSchema.optional()
+    .describe('An optional summary of upcoming major economic events.'),
 }).catchall(z.string().describe(
     "Additional candlestick chart images for other timeframes as a data URI. The key should be in the format 'chartDataUri_<timeframe>', e.g., 'chartDataUri_1d'."
 ));
@@ -107,14 +113,18 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
 2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels across all provided charts. Note levels that appear on multiple timeframes, as they are more significant.
 3.  **Analyze the Primary Chart:** Now focus on the primary chart ({{{chartDataUri}}}). Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified.
 4.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition?
+{{#if economicEvents}}
+5.  **Check for Major Economic Events:** Review the upcoming economic events. If there is a high-impact event within the next 48 hours, you MUST mention it and explain that it is advisable to wait until after the event to enter any trade, as volatility can be unpredictable. This overrides any technical signal.
+    - Upcoming Events: {{{economicEvents.eventSummary}}}
+{{/if}}
 {{#if fundamentalAnalysis}}
-5.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
+6.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
     - Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
     - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
     - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
-6.  **Synthesize and Conclude:** Synthesize your findings based on your trading persona. State whether the technicals, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
+7.  **Synthesize and Conclude:** Synthesize your findings based on your trading persona. State whether the technicals, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
 **Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
 -   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
@@ -138,6 +148,10 @@ Primary Chart Technical Indicator Data: {{{indicatorData}}}
 - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
 - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
 - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
+{{/if}}
+{{#if economicEvents}}
+**Upcoming Economic Events:**
+- Event Summary: {{{economicEvents.eventSummary}}}
 {{/if}}
 `,
   config: {

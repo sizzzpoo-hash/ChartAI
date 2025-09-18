@@ -2,6 +2,7 @@
 "use server";
 import { analyzeChartAndGenerateTradeSignal } from "@/ai/flows/analyze-chart-and-generate-trade-signal";
 import { getFundamentalAnalysis, type GetFundamentalAnalysisOutput } from "@/ai/flows/get-fundamental-analysis";
+import { getEconomicEvents, type GetEconomicEventsOutput } from "@/ai/flows/get-economic-events";
 import type { AiPreferences } from "@/lib/types";
 
 export async function getAnalysis(
@@ -14,15 +15,23 @@ export async function getAnalysis(
 ) {
   try {
     let fundamentalAnalysis: GetFundamentalAnalysisOutput | undefined = undefined;
+    let economicEvents: GetEconomicEventsOutput | undefined = undefined;
     
-    // If a symbol is provided, fetch fundamental analysis
+    // If a symbol is provided, fetch fundamental analysis and economic events
     if (symbol) {
       try {
-        fundamentalAnalysis = await getFundamentalAnalysis({ symbol });
-      } catch (fundamentalError) {
-        console.warn("Failed to get fundamental analysis, continuing without it:", fundamentalError);
-        // Continue without fundamental analysis rather than failing completely
+        // Run both fetches in parallel to save time
+        const [faResult, eeResult] = await Promise.all([
+          getFundamentalAnalysis({ symbol }),
+          getEconomicEvents({ symbol })
+        ]);
+        fundamentalAnalysis = faResult;
+        economicEvents = eeResult;
+      } catch (newsError) {
+        console.warn("Failed to get fundamental or economic data, continuing without it:", newsError);
+        // Continue without this data rather than failing completely
         fundamentalAnalysis = undefined;
+        economicEvents = undefined;
       }
     }
 
@@ -33,6 +42,7 @@ export async function getAnalysis(
       riskProfile: preferences.riskProfile,
       detailedAnalysis: preferences.detailedAnalysis,
       fundamentalAnalysis,
+      economicEvents,
       ...multiTimeframeData,
     });
     return { success: true, data: result };
