@@ -208,3 +208,5 @@ const analyzeChartAndGenerateTradeSignalFlow = ai.defineFlow(
     }
   }
 );
+
+    
