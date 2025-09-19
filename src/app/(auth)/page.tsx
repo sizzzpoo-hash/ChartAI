@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { BrainCircuit, BotMessageSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,14 +33,6 @@ const multiTimeframeOptions = [
   { id: "1h", label: "1 Hour" },
 ];
 
-const symbols = [
-  { value: "BTCUSDT", label: "BTC/USDT" },
-  { value: "ETHUSDT", label: "ETH/USDT" },
-  { value: "SOLUSDT", label: "SOL/USDT" },
-  { value: "XRPUSDT", label: "XRP/USDT" },
-  { value: "DOGEUSDT", label: "DOGE/USDT" },
-];
-
 const indicatorsOptions = [
   { value: "all", label: "All Indicators" },
   { value: "sma", label: "SMA (20)" },
@@ -54,6 +46,8 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [symbol, setSymbol] = useState("BTCUSDT");
+  const [symbols, setSymbols] = useState<{ value: string; label: string }[]>([]);
+  const [isSymbolsLoading, setIsSymbolsLoading] = useState(true);
   const [primaryTimeframe, setPrimaryTimeframe] = useState("4h");
   const [indicator, setIndicator] = useState("all");
   const [includeFundamentals, setIncludeFundamentals] = useState(true);
@@ -62,6 +56,38 @@ export default function Home() {
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchSymbols = async () => {
+      try {
+        const response = await fetch('https://fapi.binance.com/fapi/v1/exchangeInfo');
+        if (!response.ok) {
+          throw new Error('Failed to fetch symbols');
+        }
+        const data = await response.json();
+        const perpetualSymbols = data.symbols
+          .filter((s: any) => s.contractType === 'PERPETUAL' && s.status === 'TRADING' && s.quoteAsset === 'USDT')
+          .map((s: any) => ({
+            value: s.symbol,
+            label: `${s.baseAsset}/${s.quoteAsset}`,
+          }));
+        setSymbols(perpetualSymbols);
+      } catch (error) {
+        console.error("Error fetching symbols:", error);
+        toast({
+          variant: "destructive",
+          title: "Failed to load symbols",
+          description: "Could not fetch the list of trading pairs from Binance. Please refresh the page.",
+        });
+        // Fallback to a default list
+        setSymbols([{ value: 'BTCUSDT', label: 'BTC/USDT' }]);
+      } finally {
+        setIsSymbolsLoading(false);
+      }
+    };
+
+    fetchSymbols();
+  }, [toast]);
 
   const handleAnalyze = async () => {
     if (!chartRef.current) return;
@@ -154,9 +180,9 @@ export default function Home() {
           <div className="p-4 border-b flex flex-wrap gap-4 justify-start items-center">
              <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="symbol-select">Symbol</Label>
-              <Select value={symbol} onValueChange={setSymbol}>
+              <Select value={symbol} onValueChange={setSymbol} disabled={isSymbolsLoading}>
                 <SelectTrigger id="symbol-select" className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select symbol" />
+                  <SelectValue placeholder={isSymbolsLoading ? "Loading symbols..." : "Select symbol"} />
                 </SelectTrigger>
                 <SelectContent>
                   {symbols.map((s) => (
