@@ -117,21 +117,25 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
 **Chain of Thought Analysis (for the 'reasoning' field):**
 1.  **Establish Overall Trend (Higher Timeframes):** Start with the longest timeframe charts provided (e.g., 1d, 4h) to determine the macro trend (uptrend, downtrend, or consolidation). Note key observations and state your directional bias. For example, "The 1d and 4h charts show a clear uptrend; therefore, I will only look for bullish (long) entry signals on the primary chart and will ignore all bearish signals."
 2.  **Identify Key Levels (All Timeframes):** Pinpoint major support and resistance levels, trendlines, and supply/demand zones across all provided charts. Note levels that appear on multiple timeframes, as they are more significant. These levels will be CRITICAL for setting your stop-loss and take-profit targets later.
-3.  **Analyze the Primary Chart (For Entry):** Now focus on the primary chart ({{{chartDataUri}}}). In the context of the established macro trend, look for specific entry signals. Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels identified. Ensure any potential signal aligns with the directional bias from step 1.
-4.  **Analyze Volume & Liquidity:** Examine the volume data from the OHLCV payload. Does volume confirm the price action? For a breakout, is volume increasing? During consolidation, is volume low? On a reversal candle, is there a spike in volume? A lack of confirming volume WEAKENS any signal.
-5.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition? This helps refine entry and exit points.
+3.  **Identify Smart Money Concepts (All Timeframes):** Look for more advanced price action concepts like Order Blocks and Fair Value Gaps (FVGs).
+    *   **Order Block:** An order block is the last down-candle before a strong bullish move, or the last up-candle before a strong bearish move. These zones often act as powerful support (bullish OB) or resistance (bearish OB) when price returns to them.
+    *   **Fair Value Gap (FVG) / Imbalance:** An FVG is a three-candle pattern where there's an inefficient gap in price delivery. Look for a large candle whose wicks do not overlap with the wicks of the candles immediately before and after it. These gaps tend to get "filled" later. An FVG can act as a magnet for price.
+    *   Note these zones on the charts, as they represent high-probability areas for entries or profit targets.
+4.  **Analyze the Primary Chart (For Entry):** Now focus on the primary chart ({{{chartDataUri}}}). In the context of the established macro trend, look for specific entry signals. Analyze its candlestick patterns (e.g., engulfing, doji, hammer), momentum (using RSI and MACD from the provided data), and its position relative to the key levels and Smart Money zones identified. Ensure any potential signal aligns with the directional bias from step 1.
+5.  **Analyze Volume & Liquidity:** Examine the volume data from the OHLCV payload. Does volume confirm the price action? For a breakout, is volume increasing? During consolidation, is volume low? On a reversal candle, is there a spike in volume? A lack of confirming volume WEAKENS any signal.
+6.  **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition? This helps refine entry and exit points.
 {{#if economicEvents}}
-6.  **Check for Major Economic Events:** Review the upcoming economic events. If there is a high-impact event within the next 48 hours, you MUST mention it and explain that it is advisable to wait until after the event to enter any trade, as volatility can be unpredictable. This overrides any technical signal.
+7.  **Check for Major Economic Events:** Review the upcoming economic events. If there is a high-impact event within the next 48 hours, you MUST mention it and explain that it is advisable to wait until after the event to enter any trade, as volatility can be unpredictable. This overrides any technical signal.
     - Upcoming Events: {{{economicEvents.eventSummary}}}
 {{/if}}
 {{#if fundamentalAnalysis}}
-7.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
+8.  **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias.
     - Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
     - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
     - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
-8.  **Synthesize and Conclude:** Synthesize all your findings based on your trading persona. State whether the technicals, volume, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
+9.  **Synthesize and Conclude:** Synthesize all your findings based on your trading persona. State whether the technicals, volume, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
 **Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
 -   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
@@ -208,5 +212,3 @@ const analyzeChartAndGenerateTradeSignalFlow = ai.defineFlow(
     }
   }
 );
-
-    
