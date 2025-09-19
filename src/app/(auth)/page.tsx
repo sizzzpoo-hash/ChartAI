@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { BrainCircuit, BotMessageSquare } from "lucide-react";
+import { BrainCircuit, BotMessageSquare, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const timeframes = [
   { value: "15m", label: "15 Minutes" },
@@ -52,6 +54,7 @@ export default function Home() {
   const [indicator, setIndicator] = useState("all");
   const [includeFundamentals, setIncludeFundamentals] = useState(true);
   const [additionalTimeframes, setAdditionalTimeframes] = useState<string[]>(["1d", "1h"]);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
@@ -165,6 +168,8 @@ export default function Home() {
       }
     });
   };
+  
+  const currentSymbolLabel = symbols.find(s => s.value === symbol)?.label || "Select symbol...";
 
   return (
     <div className="flex flex-col gap-8">
@@ -180,18 +185,44 @@ export default function Home() {
           <div className="p-4 border-b flex flex-wrap gap-4 justify-start items-center">
              <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="symbol-select">Symbol</Label>
-              <Select value={symbol} onValueChange={setSymbol} disabled={isSymbolsLoading}>
-                <SelectTrigger id="symbol-select" className="w-full sm:w-[180px]">
-                  <SelectValue placeholder={isSymbolsLoading ? "Loading symbols..." : "Select symbol"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {symbols.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+               <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={comboboxOpen}
+                    className="w-full sm:w-[180px] justify-between"
+                    disabled={isSymbolsLoading}
+                  >
+                    <span className="truncate">
+                      {isSymbolsLoading ? "Loading symbols..." : currentSymbolLabel}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search symbol..." />
+                    <CommandList>
+                      <CommandEmpty>No symbol found.</CommandEmpty>
+                      <CommandGroup>
+                        {symbols.map((s) => (
+                          <CommandItem
+                            key={s.value}
+                            value={s.value}
+                            onSelect={(currentValue) => {
+                              setSymbol(currentValue === symbol ? "" : currentValue.toUpperCase());
+                              setComboboxOpen(false);
+                            }}
+                          >
+                            {s.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
              <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="timeframe-select">Primary Timeframe</Label>
@@ -287,5 +318,7 @@ export default function Home() {
     </div>
   );
 }
+
+    
 
     
