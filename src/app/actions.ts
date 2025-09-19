@@ -5,6 +5,30 @@ import { getFundamentalAnalysis, type GetFundamentalAnalysisOutput } from "@/ai/
 import { getEconomicEvents, type GetEconomicEventsOutput } from "@/ai/flows/get-economic-events";
 import type { AiPreferences } from "@/lib/types";
 
+// Helper function to determine the current trading session
+function getCurrentSession(): string {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+
+  const isLondonOpen = utcHour >= 8 && utcHour < 17;
+  const isNewYorkOpen = utcHour >= 13 && utcHour < 22;
+  const isAsianOpen = utcHour >= 0 && utcHour < 9;
+
+  if (isLondonOpen && isNewYorkOpen) {
+    return "London/New York Overlap (High Volatility)";
+  }
+  if (isLondonOpen) {
+    return "London Session";
+  }
+  if (isNewYorkOpen) {
+    return "New York Session";
+  }
+  if (isAsianOpen) {
+    return "Asian Session (Low Volatility)";
+  }
+  return "Session Closed";
+}
+
 export async function getAnalysis(
     chartDataUri: string, 
     ohlcData: string, 
@@ -35,12 +59,15 @@ export async function getAnalysis(
       }
     }
 
+    const currentSession = getCurrentSession();
+
     const result = await analyzeChartAndGenerateTradeSignal({ 
       chartDataUri, 
       ohlcData, 
       indicatorData,
       riskProfile: preferences.riskProfile,
       detailedAnalysis: preferences.detailedAnalysis,
+      currentSession,
       fundamentalAnalysis,
       economicEvents,
       ...multiTimeframeData,
