@@ -430,7 +430,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         if (showVolume) {
           const volumeSeries = chart.addHistogramSeries({
-            pane: paneIndex++,
+            pane: paneIndex,
             priceFormat: { type: 'volume' },
           });
           volumeSeries.setData(formattedData.map(d => ({
@@ -438,6 +438,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
             value: d.volume,
             color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
           })));
+          paneIndex++;
         }
 
         if (newIndicators.sma) {
@@ -456,8 +457,9 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         }
         if (newIndicators.rsi) {
           const rsiData = calculateRSI(formattedData, 14);
-          const rsiSeries = chart.addLineSeries({ color: 'purple', lineWidth: 2, pane: paneIndex++ });
+          const rsiSeries = chart.addLineSeries({ color: 'purple', lineWidth: 2, pane: paneIndex });
           rsiSeries.setData(rsiData);
+          paneIndex++;
         }
         if (newIndicators.macd) {
           const macdData = calculateMACD(formattedData, 12, 26, 9);
@@ -467,6 +469,7 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
           macdSignalSeries.setData(macdData.signalLine);
           const macdHistSeries = chart.addHistogramSeries({ pane: paneIndex });
           macdHistSeries.setData(macdData.histogram);
+          paneIndex++;
         }
         
         chart.timeScale().fitContent();
