@@ -139,13 +139,13 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
     - Overall Summary: {{{fundamentalAnalysis.overallSummary}}}
 {{/if}}
-10. **Synthesize and Conclude:** Synthesize all your findings based on your trading persona and the session context. State whether the technicals, volume, fundamentals, and timeframes align to meet your strict entry criteria. Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
+10. **Synthesize and Conclude:** Synthesize all your findings based on your trading persona and the session context. State whether the technicals, volume, fundamentals, and timeframes align to meet your entry criteria. Determine if the setup is "High-Probability" (all criteria are strongly met) or "Medium-Probability" (most criteria are met, but some are weak, e.g., low volume confirmation). Form a clear bullish, bearish, or neutral thesis. This is the basis for your final signal.
 
 **Final Output Generation (for 'analysisSummary' and 'tradeSignal' fields):**
--   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
--   **Trade Signal:** Only if your reasoning concluded with a high-probability setup that meets ALL the rules for your '{{{riskProfile}}}' persona, provide a clear trade signal.
+-   **Analysis Summary:** Write a concise summary of the conclusion from your reasoning. You MUST start your summary by stating the probability of the setup (e.g., "High-Probability Bullish Setup:", "Medium-Probability Bearish Setup:", or "No Clear Setup Found:"). If it is a medium-probability setup, you must explain which factors are weak or missing. {{#if detailedAnalysis}}Provide a detailed, step-by-step breakdown.{{else}}Provide a brief, concise summary.{{/if}}
+-   **Trade Signal:** If your reasoning concluded with a high-probability OR medium-probability setup that meets the rules for your '{{{riskProfile}}}' persona, provide a clear trade signal.
 
-**IMPORTANT:** If your reasoning finds no clear opportunity or if the setup does not meet the strict criteria for your persona, you MUST still provide a full response. In 'reasoning', explain why the criteria were not met. In 'analysisSummary', state the conclusion (e.g., "Market is consolidating with no high-probability setup matching the conservative criteria."). For 'tradeSignal', set 'entryPriceRange' and 'stopLoss' to "N/A", and 'takeProfitLevels' to an empty array.
+**IMPORTANT:** If your reasoning finds no clear opportunity or if the setup does not meet the criteria for your persona, you MUST still provide a full response. In 'reasoning', explain why the criteria were not met. In 'analysisSummary', state the conclusion (e.g., "No Clear Setup Found: The market is consolidating with no high-probability setup matching the conservative criteria."). For 'tradeSignal', set 'entryPriceRange' and 'stopLoss' to "N/A", and 'takeProfitLevels' to an empty array.
 
 Use OHLCV and indicator data for precise price points. Use chart images for visual confirmation.
 
