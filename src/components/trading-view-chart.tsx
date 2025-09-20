@@ -327,12 +327,13 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
 
         // Volume
         if (showVolume) {
+          const volumePaneId = `pane-${paneIndex}`;
           seriesRef.current.volume = chart.addHistogramSeries({
             pane: paneIndex,
             priceFormat: {
               type: 'volume',
             },
-            priceScaleId: '',
+            priceScaleId: volumePaneId,
           });
           const volumeData = chartData.map(d => ({
             time: d.time,
@@ -340,11 +341,11 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
             color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
           }));
           seriesRef.current.volume.setData(volumeData);
-          chart.priceScale('').applyOptions({
-            scaleMargins: {
-              top: 0.8, // 80% space for volume
+          chart.priceScale(volumePaneId).applyOptions({
+             scaleMargins: {
+              top: 0.9,
               bottom: 0,
-            }
+            },
           });
           paneIndex++;
         }
@@ -374,12 +375,20 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         if (indicators.rsi) {
             const rsiData = calculateRSI(chartData, 14);
             newIndicatorData.rsi = rsiData;
+            const rsiPaneId = `pane-${paneIndex}`;
             seriesRef.current.rsi = chart.addLineSeries({ 
                 color: 'purple', 
                 lineWidth: 2, 
                 pane: paneIndex,
+                priceScaleId: rsiPaneId,
             });
             seriesRef.current.rsi.setData(rsiData);
+            chart.priceScale(rsiPaneId).applyOptions({
+              scaleMargins: {
+                top: 0.9,
+                bottom: 0,
+              },
+            });
             paneIndex++;
         }
 
@@ -387,12 +396,20 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
         if (indicators.macd) {
             const macdData = calculateMACD(chartData, 12, 26, 9);
             newIndicatorData.macd = macdData;
-            seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: paneIndex });
+            const macdPaneId = `pane-${paneIndex}`;
+
+            seriesRef.current.macdLine = chart.addLineSeries({ color: 'blue', lineWidth: 2, pane: paneIndex, priceScaleId: macdPaneId });
             seriesRef.current.macdLine.setData(macdData.macdLine);
-            seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: paneIndex });
+            seriesRef.current.macdSignal = chart.addLineSeries({ color: 'red', lineWidth: 2, pane: paneIndex, priceScaleId: macdPaneId });
             seriesRef.current.macdSignal.setData(macdData.signalLine);
-            seriesRef.current.macdHist = chart.addHistogramSeries({ pane: paneIndex });
+            seriesRef.current.macdHist = chart.addHistogramSeries({ pane: paneIndex, priceScaleId: macdPaneId });
             seriesRef.current.macdHist.setData(macdData.histogram);
+            chart.priceScale(macdPaneId).applyOptions({
+              scaleMargins: {
+                top: 0.9,
+                bottom: 0,
+              },
+            });
             paneIndex++;
         }
         
