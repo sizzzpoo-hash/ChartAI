@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { BrainCircuit, BotMessageSquare, ChevronsUpDown } from "lucide-react";
+import { BrainCircuit, BotMessageSquare, ChevronsUpDown, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const timeframes = [
   { value: "15m", label: "15 Minutes" },
@@ -211,10 +212,16 @@ export default function Home() {
                             key={s.value}
                             value={s.value}
                             onSelect={(currentValue) => {
-                              setSymbol(currentValue === symbol ? symbol : currentValue);
+                              setSymbol(currentValue.toUpperCase());
                               setComboboxOpen(false);
                             }}
                           >
+                             <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                symbol === s.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
                             {s.label}
                           </CommandItem>
                         ))}
@@ -317,4 +324,5 @@ export default function Home() {
       {analysis && <AnalysisDisplay result={analysis} />}
     </div>
   );
-}
+
+    
