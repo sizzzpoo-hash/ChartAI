@@ -287,7 +287,9 @@ export const TradingViewChart = forwardRef<TradingViewChartRef, TradingViewChart
       setLoading(true);
       setError(null);
       // Clear existing data before fetching new data
-      seriesRef.current.candlestick?.setData([]);
+      if (seriesRef.current.candlestick) {
+        seriesRef.current.candlestick.setData([]);
+      }
       setChartData([]);
 
       const fetchData = async () => {
