@@ -21,6 +21,7 @@ import { useAiPreferences } from "@/lib/hooks/use-ai-preferences";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { useChartSettings } from "@/lib/hooks/use-chart-settings";
 
 const timeframes = [
   { value: "15m", label: "15 Minutes" },
@@ -48,17 +49,21 @@ export default function Home() {
   const chartRef = useRef<TradingViewChartRef>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [symbol, setSymbol] = useState("BTCUSDT");
   const [symbols, setSymbols] = useState<{ value: string; label: string }[]>([]);
   const [isSymbolsLoading, setIsSymbolsLoading] = useState(true);
-  const [primaryTimeframe, setPrimaryTimeframe] = useState("4h");
-  const [indicator, setIndicator] = useState("all");
-  const [includeFundamentals, setIncludeFundamentals] = useState(true);
-  const [additionalTimeframes, setAdditionalTimeframes] = useState<string[]>(["1d", "1h"]);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   
   const { addAnalysis } = useAnalysisHistory();
   const { preferences } = useAiPreferences();
+  const { 
+    settings, 
+    setSymbol, 
+    setPrimaryTimeframe, 
+    setIndicator, 
+    setIncludeFundamentals, 
+    setAdditionalTimeframes,
+    isInitialized: isSettingsInitialized
+  } = useChartSettings();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -108,8 +113,8 @@ export default function Home() {
       const multiTimeframeData: { [key: string]: string } = {};
 
       // Capture screenshots for additional timeframes
-      for (const tf of additionalTimeframes) {
-        if (tf !== primaryTimeframe) {
+      for (const tf of settings.additionalTimeframes) {
+        if (tf !== settings.primaryTimeframe) {
           const dataUri = await chartRef.current.getTimeframeData(tf, getIndicatorFlags());
           multiTimeframeData[`chartDataUri_${tf.replace(/\s+/g, '')}`] = dataUri;
         }
@@ -120,7 +125,7 @@ export default function Home() {
         ohlcData,
         indicatorData,
         preferences,
-        includeFundamentals ? symbol : undefined,
+        settings.includeFundamentals ? settings.symbol : undefined,
         multiTimeframeData
       );
 
@@ -153,24 +158,40 @@ export default function Home() {
   
   const getIndicatorFlags = () => {
     return {
-      sma: indicator === 'all' || indicator === 'sma',
-      rsi: indicator === 'all' || indicator === 'rsi',
-      macd: indicator === 'all' || indicator === 'macd',
-      bb: indicator === 'all' || indicator === 'bb',
+      sma: settings.indicator === 'all' || settings.indicator === 'sma',
+      rsi: settings.indicator === 'all' || settings.indicator === 'rsi',
+      macd: settings.indicator === 'all' || settings.indicator === 'macd',
+      bb: settings.indicator === 'all' || settings.indicator === 'bb',
     }
   }
 
   const handleTimeframeCheckbox = (timeframeId: string, checked: boolean) => {
-    setAdditionalTimeframes(prev => {
-      if (checked) {
-        return [...prev, timeframeId];
-      } else {
-        return prev.filter(tf => tf !== timeframeId);
-      }
-    });
+    const newTimeframes = checked 
+      ? [...settings.additionalTimeframes, timeframeId]
+      : settings.additionalTimeframes.filter(tf => tf !== timeframeId);
+    setAdditionalTimeframes(newTimeframes);
   };
   
-  const currentSymbolLabel = symbols.find(s => s.value === symbol)?.label || "Select symbol...";
+  const currentSymbolLabel = symbols.find(s => s.value === settings.symbol)?.label || "Select symbol...";
+
+  if (!isSettingsInitialized) {
+    return (
+      <div className="flex flex-col gap-8">
+        <Skeleton className="h-12 w-1/2" />
+        <Card>
+          <CardContent className="p-0">
+            <div className="p-4 border-b">
+              <Skeleton className="h-10 w-full" />
+            </div>
+             <div className="p-4 border-b">
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="w-full h-[600px]" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -210,16 +231,16 @@ export default function Home() {
                         {symbols.map((s) => (
                           <CommandItem
                             key={s.value}
-                            value={s.value}
-                            onSelect={(currentValue) => {
-                              setSymbol(currentValue.toUpperCase());
+                            value={s.label}
+                            onSelect={() => {
+                              setSymbol(s.value);
                               setComboboxOpen(false);
                             }}
                           >
                              <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                symbol === s.value ? "opacity-100" : "opacity-0"
+                                settings.symbol === s.value ? "opacity-100" : "opacity-0"
                               )}
                             />
                             {s.label}
@@ -233,7 +254,7 @@ export default function Home() {
             </div>
              <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="timeframe-select">Primary Timeframe</Label>
-              <Select value={primaryTimeframe} onValueChange={setPrimaryTimeframe}>
+              <Select value={settings.primaryTimeframe} onValueChange={setPrimaryTimeframe}>
                 <SelectTrigger id="timeframe-select" className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Select timeframe" />
                 </SelectTrigger>
@@ -248,7 +269,7 @@ export default function Home() {
             </div>
              <div className="grid gap-1.5 w-full sm:w-auto">
               <Label htmlFor="indicator-select">Indicator</Label>
-              <Select value={indicator} onValueChange={setIndicator}>
+              <Select value={settings.indicator} onValueChange={setIndicator}>
                 <SelectTrigger id="indicator-select" className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Select indicator" />
                 </SelectTrigger>
@@ -266,7 +287,7 @@ export default function Home() {
              <div className="flex items-center space-x-2 self-end">
                 <Switch 
                   id="fundamentals-switch" 
-                  checked={includeFundamentals}
+                  checked={settings.includeFundamentals}
                   onCheckedChange={setIncludeFundamentals}
                 />
                 <Label htmlFor="fundamentals-switch">Include News Analysis</Label>
@@ -278,9 +299,9 @@ export default function Home() {
                   <div key={tf.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`tf-${tf.id}`}
-                      checked={additionalTimeframes.includes(tf.id)}
+                      checked={settings.additionalTimeframes.includes(tf.id)}
                       onCheckedChange={(checked) => handleTimeframeCheckbox(tf.id, !!checked)}
-                      disabled={primaryTimeframe === tf.id}
+                      disabled={settings.primaryTimeframe === tf.id}
                     />
                     <Label htmlFor={`tf-${tf.id}`} className="font-normal">
                       {tf.label}
@@ -292,8 +313,8 @@ export default function Home() {
           </div>
           <TradingViewChart 
             ref={chartRef} 
-            symbol={symbol} 
-            timeframe={primaryTimeframe}
+            symbol={settings.symbol} 
+            timeframe={settings.primaryTimeframe}
             indicators={getIndicatorFlags()}
             showVolume={true}
           />
@@ -324,5 +345,4 @@ export default function Home() {
       {analysis && <AnalysisDisplay result={analysis} />}
     </div>
   );
-
-    
+}
