@@ -211,7 +211,7 @@ export default function Home() {
                             key={s.value}
                             value={s.value}
                             onSelect={(currentValue) => {
-                              setSymbol(currentValue === symbol ? "" : currentValue.toUpperCase());
+                              setSymbol(currentValue === symbol ? symbol : currentValue);
                               setComboboxOpen(false);
                             }}
                           >
@@ -318,7 +318,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
-
-    
