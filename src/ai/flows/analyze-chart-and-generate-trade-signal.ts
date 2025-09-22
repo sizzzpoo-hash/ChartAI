@@ -157,11 +157,11 @@ SECOND, based *only* on the conclusions from your reasoning, generate the final 
     *   Your final conclusion must be supported by this nuanced volume analysis. A lack of confirming volume WEAKENS any signal.
 11. **Analyze Volatility (Bollinger Bands):** If Bollinger Bands data is provided, analyze the bands. Are they expanding (high volatility) or contracting (low volatility)? Is the price touching the upper or lower band, suggesting an overbought or oversold condition? This helps refine entry and exit points.
 {{#if economicEvents}}
-12. **Check for Major Economic Events:** Review the upcoming economic events. If there is a high-impact event within the next 48 hours, you MUST mention it and explain that it is advisable to wait until after the event to enter any trade, as volatility can be unpredictable. This overrides any technical signal.
+12. **Integrate Economic Events:** Review the upcoming economic events. A high-impact event is a major risk factor that can invalidate *any* technical setup. You MUST state if an event is upcoming and consider it a primary reason to either avoid a trade or use a much tighter stop loss. Do not enter a new trade immediately before a major news release.
     - Upcoming Events: {{{economicEvents.eventSummary}}}
 {{/if}}
 {{#if fundamentalAnalysis}}
-13. **Consider Fundamental Context:** Review the provided fundamental analysis. Does it support or contradict the technical picture? Note how this influences your bias, especially the market sentiment.
+13. **Integrate Fundamental Context:** Review the provided fundamental analysis. You MUST assess whether the fundamental narrative aligns with, contradicts, or is neutral to the technical setup. A strong technical signal that is supported by a bullish fundamental narrative is a much higher probability setup. A technical signal that is contradicted by fundamentals (e.g., a bullish chart pattern during negative regulatory news) is a lower probability setup and must be noted as such.
     - Regulatory News: {{{fundamentalAnalysis.regulatoryNews}}}
     - Institutional Adoption: {{{fundamentalAnalysis.institutionalAdoption}}}
     - Market Sentiment: {{{fundamentalAnalysis.marketSentiment}}}
