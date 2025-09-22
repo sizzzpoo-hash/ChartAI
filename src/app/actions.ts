@@ -45,17 +45,47 @@ export async function getAnalysis(
     if (symbol) {
       try {
         // Run both fetches in parallel to save time
-        const [faResult, eeResult] = await Promise.all([
+        const [faResult, eeResult] = await Promise.allSettled([
           getFundamentalAnalysis({ symbol }),
           getEconomicEvents({ symbol })
         ]);
-        fundamentalAnalysis = faResult;
-        economicEvents = eeResult;
+        
+        // Handle fundamental analysis result
+        if (faResult.status === 'fulfilled') {
+          fundamentalAnalysis = faResult.value;
+        } else {
+          console.warn('Fundamental analysis failed:', faResult.reason);
+          // Provide a basic fallback
+          fundamentalAnalysis = {
+            regulatoryNews: 'Unable to retrieve current regulatory news',
+            institutionalAdoption: 'Unable to retrieve current institutional adoption data',
+            marketSentiment: 'Mixed - monitor current market conditions',
+            overallSummary: 'Fundamental analysis unavailable - focus on technical indicators'
+          };
+        }
+        
+        // Handle economic events result
+        if (eeResult.status === 'fulfilled') {
+          economicEvents = eeResult.value;
+        } else {
+          console.warn('Economic events failed:', eeResult.reason);
+          // Provide a basic fallback
+          economicEvents = {
+            eventSummary: 'Economic events data unavailable - monitor major economic calendars and central bank announcements'
+          };
+        }
       } catch (newsError) {
-        console.warn("Failed to get fundamental or economic data, continuing without it:", newsError);
-        // Continue without this data rather than failing completely
-        fundamentalAnalysis = undefined;
-        economicEvents = undefined;
+        console.warn("Unexpected error in fundamental/economic data fetch:", newsError);
+        // Provide fallback data instead of leaving undefined
+        fundamentalAnalysis = {
+          regulatoryNews: 'Data retrieval temporarily unavailable',
+          institutionalAdoption: 'Data retrieval temporarily unavailable',
+          marketSentiment: 'Mixed',
+          overallSummary: 'Focus on technical analysis as fundamental data is temporarily unavailable'
+        };
+        economicEvents = {
+          eventSummary: 'Economic events monitoring temporarily unavailable - check major financial calendars'
+        };
       }
     }
 
